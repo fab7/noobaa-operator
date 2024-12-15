@@ -1,4 +1,4 @@
-name: Manual Operator Build Dispatch
+name: My Manual Operator Build Dispatch
 
 on:
   workflow_dispatch:
@@ -78,16 +78,16 @@ jobs:
       #     docker tag  noobaa/noobaa-operator ${{ steps.prep.outputs.operatortags }}
       #     docker push ${{ steps.prep.outputs.operatortags }}
 
-      - name: Build Bundle
-        run: |
-          make bundle-image \
-          csv-name=noobaa-operator.clusterserviceversion.yaml \
-          core-image=quay.io/${{ github.event.inputs.branch }}-${{ steps.prep.outputs.version }}${{ steps.suffix.outputs.suffix }} \
-          operator-image=quay.io/${{ steps.prep.outputs.operatortags }} \
-          db-image=centos/postgresql-15-centos7 \
-          psql-12-image=centos/postgresql-12-centos7 \
-          obc-crd="owned" \
-          BUNDLE_IMAGE=quay.io/${{ steps.prep.outputs.operatorbundletags }}
+      # - name: Build Bundle
+      #   run: |
+      #     make bundle-image \
+      #     csv-name=noobaa-operator.clusterserviceversion.yaml \
+      #     core-image=quay.io/${{ github.event.inputs.branch }}-${{ steps.prep.outputs.version }}${{ steps.suffix.outputs.suffix }} \
+      #     operator-image=quay.io/${{ steps.prep.outputs.operatortags }} \
+      #     db-image=centos/postgresql-15-centos7 \
+      #     psql-12-image=centos/postgresql-12-centos7 \
+      #     obc-crd="owned" \
+      #     BUNDLE_IMAGE=quay.io/${{ steps.prep.outputs.operatorbundletags }}
 
       # - name: Login to Quay.io Registry
       #   run: echo ${{ secrets.GHACTIONQUAYTOKEN }} | docker login quay.io -u ${{ secrets.GHACTIONQUAYNAME }} --password-stdin

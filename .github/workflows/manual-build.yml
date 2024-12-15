@@ -55,8 +55,8 @@ jobs:
           sudo docker manifest inspect noobaa/noobaa-core:${{ github.event.inputs.branch }}-${{ steps.prep.outputs.version }}${{ steps.suffix.outputs.suffix }} > /dev/null || exit 1
           echo "::found version ${{ github.event.inputs.branch }}-${{ steps.prep.outputs.version }}${{ steps.suffix.outputs.suffix }}, updating image version"
 
-      - name: Login to DockerHub Registry
-        run: echo ${{ secrets.GHACTIONSDOCKERHUB }} | docker login -u ${{ secrets.GHACTIONSDOCKERHUBNAME }} --password-stdin
+      # - name: Login to DockerHub Registry
+      #   run: echo ${{ secrets.GHACTIONSDOCKERHUB }} | docker login -u ${{ secrets.GHACTIONSDOCKERHUBNAME }} --password-stdin
 
       - name: Update Core Release Image
         id: update-release-image
@@ -72,12 +72,12 @@ jobs:
           # git commit -m "Auto update core image" -a
 
       - name: Build & Push Docker Image to DockerHub
-        env:
-          DOCKERHUB_OWNER: ${{ secrets.GHACTIONSDOCKERHUBNAME }}
+      #   env:
+      #     DOCKERHUB_OWNER: ${{ secrets.GHACTIONSDOCKERHUBNAME }}
         run: |
           make image VERSION=latest
           docker tag  noobaa/noobaa-operator ${{ steps.prep.outputs.operatortags }}
-          docker push ${{ steps.prep.outputs.operatortags }}
+      #     docker push ${{ steps.prep.outputs.operatortags }}
 
       - name: Build Bundle
         run: |

@@ -1,4 +1,4 @@
-name: Manual Operator Build Dispatch
+name: Manual TMFS-Enabled Operator Build 
 
 on:
   workflow_dispatch:
@@ -25,7 +25,8 @@ jobs:
 
       - name: Get Current Date
         id: date
-        run: echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
+        # OBSOLETE-20241215 run: echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
+        run: echo "date=$(date -d 'yesterday' +'%Y%m%d')" >> $GITHUB_OUTPUT
 
       - name: Prepare Suffix
         id: suffix

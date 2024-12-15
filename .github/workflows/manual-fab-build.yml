@@ -1,4 +1,4 @@
-name: My Manual Operator Build Dispatch
+name: Manual TMFS-Enabled Operator Build
 
 on:
   workflow_dispatch:
@@ -108,11 +108,11 @@ jobs:
       #     docker tag ${{ steps.prep.outputs.operatortags }} quay.io/${{ steps.prep.outputs.ocsdevlatest }} 
       #     docker push quay.io/${{ steps.prep.outputs.ocsdevlatest }}
 
-      # - name: Push CLI Binary
-      #   run: |
-      #     make cli
-      #     make release-cli VERSION=-${{ github.event.inputs.branch }}-${{ steps.prep.outputs.version }}${{ steps.suffix.outputs.suffix }}
-      #     #noobaa-operator-cli
+      - name: Push CLI Binary
+        run: |
+          make cli
+          make release-cli VERSION=-${{ github.event.inputs.branch }}-${{ steps.prep.outputs.version }}${{ steps.suffix.outputs.suffix }}
+          #noobaa-operator-cli
 
       #     s3AccessKey="${{ secrets.AWSACCESSKEY }}"
       #     s3SecretKey="${{ secrets.AWSSECRETKEY }}"

@@ -39,14 +39,16 @@ jobs:
           DOCKER_OPERATOR_IMAGE=noobaa/noobaa-operator
           DOCKER_OPERATOR_BUNDLE_IMAGE=noobaa/noobaa-operator-bundle
           VERSION="${{ steps.date.outputs.date }}"
-          echo "::warning ${VERSION}"
+          echo "::warning VERSION=${VERSION}"
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           OPERATOR_TAGS="${DOCKER_OPERATOR_IMAGE}:${{ github.event.inputs.branch }}-${VERSION}${{ steps.suffix.outputs.suffix }}"
           OPERATOR_BUNDLE_TAGS="${DOCKER_OPERATOR_BUNDLE_IMAGE}:${{ github.event.inputs.branch }}-${VERSION}${{ steps.suffix.outputs.suffix }}"
           OPERATOR_OCS_DEV_TAG="ocs-dev/noobaa-operator:${{ github.event.inputs.branch }}-latest"
-          echo "::warning ${CORE_TAGS}"
+          echo "::warning CORE_TAGS=${CORE_TAGS}"
           echo "operatortags=${OPERATOR_TAGS}" >> $GITHUB_OUTPUT
+          echo "::warning operatortags=${operatortags}"
           echo "operatorbundletags=${OPERATOR_BUNDLE_TAGS}" >> $GITHUB_OUTPUT
+          echo "::warning operatorbundletags=${operatorbundletags}"
           echo "ocsdevlatest=${OPERATOR_OCS_DEV_TAG}" >> $GITHUB_OUTPUT
 
       - name: Update Core Release
@@ -101,26 +103,26 @@ jobs:
           docker push quay.io/${{ steps.prep.outputs.operatortags }} 
           docker push quay.io/${{ steps.prep.outputs.operatorbundletags }}
 
-      - name: Push to ocs-dev as latest
-        env:
-          DOCKERHUB_OWNER: ${{ secrets.GHACTIONQUAYNAME }}
-        run: |
-          docker login -u="${{ secrets.OCSDEVCIUSER }}" -p="${{ secrets.OCSDEVCITOKEN }}" quay.io
-          docker tag ${{ steps.prep.outputs.operatortags }} quay.io/${{ steps.prep.outputs.ocsdevlatest }} 
-          docker push quay.io/${{ steps.prep.outputs.ocsdevlatest }}
+      # - name: Push to ocs-dev as latest
+      #   env:
+      #     DOCKERHUB_OWNER: ${{ secrets.GHACTIONQUAYNAME }}
+      #   run: |
+      #     docker login -u="${{ secrets.OCSDEVCIUSER }}" -p="${{ secrets.OCSDEVCITOKEN }}" quay.io
+      #     docker tag ${{ steps.prep.outputs.operatortags }} quay.io/${{ steps.prep.outputs.ocsdevlatest }} 
+      #     docker push quay.io/${{ steps.prep.outputs.ocsdevlatest }}
 
-      - name: Push CLI Binary
-        run: |
-          make cli
-          make release-cli VERSION=-${{ github.event.inputs.branch }}-${{ steps.prep.outputs.version }}${{ steps.suffix.outputs.suffix }}
-          #noobaa-operator-cli
+      # - name: Push CLI Binary
+      #   run: |
+      #     make cli
+      #     make release-cli VERSION=-${{ github.event.inputs.branch }}-${{ steps.prep.outputs.version }}${{ steps.suffix.outputs.suffix }}
+      #     #noobaa-operator-cli
 
-          s3AccessKey="${{ secrets.AWSACCESSKEY }}"
-          s3SecretKey="${{ secrets.AWSSECRETKEY }}"
-          s3Bucket="noobaa-operator-cli"
-          region="us-east-2"
-          fileName="noobaa-linux-${{ github.event.inputs.branch }}-${{ steps.prep.outputs.version }}${{ steps.suffix.outputs.suffix }}"
+      #     s3AccessKey="${{ secrets.AWSACCESSKEY }}"
+      #     s3SecretKey="${{ secrets.AWSSECRETKEY }}"
+      #     s3Bucket="noobaa-operator-cli"
+      #     region="us-east-2"
+      #     fileName="noobaa-linux-${{ github.event.inputs.branch }}-${{ steps.prep.outputs.version }}${{ steps.suffix.outputs.suffix }}"
 
-          cp build-releases/noobaa-linux-v-${{ github.event.inputs.branch }}-${{ steps.prep.outputs.version }}${{ steps.suffix.outputs.suffix }} ${fileName}
+      #     cp build-releases/noobaa-linux-v-${{ github.event.inputs.branch }}-${{ steps.prep.outputs.version }}${{ steps.suffix.outputs.suffix }} ${fileName}
 
-          .travis/upload-s3-object-using-curl.sh ${s3AccessKey} ${s3SecretKey} ${s3Bucket}@${region} ${fileName} ${fileName}
+      #     .travis/upload-s3-object-using-curl.sh ${s3AccessKey} ${s3SecretKey} ${s3Bucket}@${region} ${fileName} ${fileName}

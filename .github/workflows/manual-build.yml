@@ -11,7 +11,7 @@ on:
         default: ""
 
 jobs:
-  publish-image:
+  test-build-and-publish-image:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -46,9 +46,9 @@ jobs:
           OPERATOR_OCS_DEV_TAG="ocs-dev/noobaa-operator:${{ github.event.inputs.branch }}-latest"
           echo "::warning CORE_TAGS=${CORE_TAGS}"
           echo "operatortags=${OPERATOR_TAGS}" >> $GITHUB_OUTPUT
-          echo "::warning operatortags=${operatortags}"
+          echo "::warning OPERATOR_TAGS=${OPERATOR_TAGS}"
           echo "operatorbundletags=${OPERATOR_BUNDLE_TAGS}" >> $GITHUB_OUTPUT
-          echo "::warning operatorbundletags=${operatorbundletags}"
+          echo "::warning OPERATOR_BUNDLE_TAGS=${OPERATOR_BUNDLE_TAGS}"
           echo "ocsdevlatest=${OPERATOR_OCS_DEV_TAG}" >> $GITHUB_OUTPUT
 
       - name: Update Core Release
@@ -74,12 +74,12 @@ jobs:
           # git commit -m "Auto update core image" -a
 
       - name: Build & Push Docker Image to DockerHub
-      #   env:
-      #     DOCKERHUB_OWNER: ${{ secrets.GHACTIONSDOCKERHUBNAME }}
+        # env:
+        #   DOCKERHUB_OWNER: ${{ secrets.GHACTIONSDOCKERHUBNAME }}
         run: |
           make image VERSION=latest
           docker tag  noobaa/noobaa-operator ${{ steps.prep.outputs.operatortags }}
-      #     docker push ${{ steps.prep.outputs.operatortags }}
+        #   docker push ${{ steps.prep.outputs.operatortags }}
 
       - name: Build Bundle
         run: |
@@ -99,9 +99,11 @@ jobs:
         env:
           DOCKERHUB_OWNER: ${{ secrets.GHACTIONQUAYNAME }}
         run: |
-          docker tag ${{ steps.prep.outputs.operatortags }} quay.io/${{ steps.prep.outputs.operatortags }} 
-          docker push quay.io/${{ steps.prep.outputs.operatortags }} 
-          docker push quay.io/${{ steps.prep.outputs.operatorbundletags }}
+          # OBSOLETE-20241216 docker tag ${{ steps.prep.outputs.operatortags }} quay.io/${{ steps.prep.outputs.operatortags }}
+          # OBSOLETE-20241216 docker push quay.io/${{ steps.prep.outputs.operatortags }}
+          docker tag ${{ steps.prep.outputs.operatortags }} quay.io/fab/noobaa-operator-tmfs:latest
+          docker push quay.io/fab/noobaa-operator-tmfs:latest
+          # FIXME-20241216 docker push quay.io/${{ steps.prep.outputs.operatorbundletags }}
 
       # - name: Push to ocs-dev as latest
       #   env:

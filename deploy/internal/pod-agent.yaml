@@ -34,9 +34,14 @@ spec:
           mountPath: /noobaa_storage
         - name: tmp-logs-vol
           mountPath: /usr/local/noobaa/logs
-      securityContext:
-        runAsNonRoot: true
-        allowPrivilegeEscalation: false
+      # [OBSO-20241220] securityContext:
+      # [OBSO-20241220]   runAsNonRoot: true
+      # [OBSO-20241220]   allowPrivilegeEscalation: false
+      securityContext:      # [NEW-20241220-Tmp securityContext]
+        privileged: true    # [NEW-20241220-Tmp securityContext]
+        capabilities:       # [NEW-20241220-Tmp securityContext]
+          add:              # [NEW-20241220-Tmp securityContext]
+            - SYS_ADMIN     # [NEW-20241220-Tmp securityContext]
   automountServiceAccountToken: false
   securityContext:
     runAsUser: 10001

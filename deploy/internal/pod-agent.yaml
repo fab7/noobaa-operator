@@ -8,7 +8,7 @@ spec:
   containers:
     - name: noobaa-agent
       image: NOOBAA_CORE_IMAGE
-      imagePullPolicy: IfNotPresent
+      imagePullPolicy: Always # [TMP-20241222] was IfNotPresent
       resources:
         # https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
         requests:

@@ -1,3 +1,19 @@
+###############################################################################
+# This manifest defines a customized NooBaa 'pod-agent' which embeds a Tiering
+# Management File System (TMFS) application for handling the migration and the 
+# recall of data between the 'noobaa-agent' pods (a.k.a. 'backingstore-tmfs'  
+# or 'bs-tmfs' pods) and a tape library. 
+# 
+# In essence, TMFS is a FUSE filesystem that passes the POSIX requests issued
+# by NooBaa down to the underlying base filesystem while interfacing with the
+# tape library to migrate and recall the data.
+#
+# NOTES:
+#  - We use node anti-affinity rules to spread the BS-TMFS pods while ensuring
+#    the scheduling of no more than one BS-TMFS per node.
+#  - We use node affinity to solely schedule the BS-TMFS pods on nodes 
+#    equipped with a host buffer adapter (HBA).    
+###############################################################################
 apiVersion: v1
 kind: Pod
 metadata:
@@ -5,6 +21,39 @@ metadata:
     app: noobaa
   name: noobaa-agent
 spec:
+  # -------------------------------------------------------------
+  # -- AFFINITY
+  # -------------------------------------------------------------
+  affinity:
+    nodeAffinity:
+      # - We want this 'noobaa-agent' pod to be scheduled on a node that is equipped
+      #   with a host buffer adapter (HBA).
+      # - The nodes equipped with an HBA are identified by the label 'hba=fc'.
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: hba
+                operator: In
+                values:
+                  - fc
+    podAntiAffinity:
+      # - We want to place no more than one 'bs-tmfs' pod per node.
+      # - The 'bs-tmfs' pod comes with the labels 'module=bs-tmfs'
+      #   as well as 'pool=bs-tmfs-X-Y' (with e.g., X=5, Y=0).
+      # - We want this scheduling to be enforced at the node level
+      #   (.i.e, topological domain = kubernetes.io/hostname)
+      # - The scheduling result translates into a unique 'tmfs' pod per node.
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: module
+                operator: In
+                values: # [INFO] Must match one of the .spec.metadata.labels
+                  - bs-tmfs
+          topologyKey: "kubernetes.io/hostname"
+  # -------------------------------------------------------------
+  # -- MAIN-CONTAINER
+  # -------------------------------------------------------------
   containers:
     - name: noobaa-agent
       image: NOOBAA_CORE_IMAGE
@@ -34,14 +83,13 @@ spec:
           mountPath: /noobaa_storage
         - name: tmp-logs-vol
           mountPath: /usr/local/noobaa/logs
-      # [OBSO-20241220] securityContext:
-      # [OBSO-20241220]   runAsNonRoot: true
-      # [OBSO-20241220]   allowPrivilegeEscalation: false
-      securityContext:      # [NEW-20241220-Tmp securityContext]
-        privileged: true    # [NEW-20241220-Tmp securityContext]
-        capabilities:       # [NEW-20241220-Tmp securityContext]
-          add:              # [NEW-20241220-Tmp securityContext]
-            - SYS_ADMIN     # [NEW-20241220-Tmp securityContext]
+      securityContext:
+        privileged: false               # [20250103] field is new
+        runAsNonRoot: true
+        allowPrivilegeEscalation: true  # [20250103] was false
+        capabilities:                   # [20250103] field is new
+          add:                          # [20250103] field is new
+            - SYS_ADMIN                 # [20250103] field is new
   automountServiceAccountToken: false
   securityContext:
     runAsUser: 10001

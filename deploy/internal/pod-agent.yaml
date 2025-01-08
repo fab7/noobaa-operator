@@ -25,10 +25,10 @@ spec:
   # -- AFFINITY
   # -------------------------------------------------------------
   affinity:
+    # - We want this 'noobaa-agent' pod to be scheduled on a node that is equipped
+    #   with a host buffer adapter (HBA).
+    # - The nodes equipped with an HBA are identified by the label 'hba=fc'.
     nodeAffinity:
-      # - We want this 'noobaa-agent' pod to be scheduled on a node that is equipped
-      #   with a host buffer adapter (HBA).
-      # - The nodes equipped with an HBA are identified by the label 'hba=fc'.
       requiredDuringSchedulingIgnoredDuringExecution:
         nodeSelectorTerms:
           - matchExpressions:
@@ -36,21 +36,28 @@ spec:
                 operator: In
                 values:
                   - fc
-    podAntiAffinity:
-      # - We want to place no more than one 'bs-tmfs' pod per node.
-      # - The 'bs-tmfs' pod comes with the labels 'module=bs-tmfs'
-      #   as well as 'pool=bs-tmfs-X-Y' (with e.g., X=5, Y=0).
-      # - We want this scheduling to be enforced at the node level
-      #   (.i.e, topological domain = kubernetes.io/hostname)
-      # - The scheduling result translates into a unique 'tmfs' pod per node.
-      requiredDuringSchedulingIgnoredDuringExecution:
-        - labelSelector:
-            matchExpressions:
-              - key: module
-                operator: In
-                values: # [INFO] Must match one of the .spec.metadata.labels
-                  - bs-tmfs
-          topologyKey: "kubernetes.io/hostname"
+    # - We want to place no more than one 'bs-tmfs-X-Y-noobaa-pod-<UID>' pod per node.
+    # - Every  backingstore pod of type PV-POOL comes with the label 'pool=bs-tmfs-X-Y'
+    #   (with e.g., X=5, Y=0) that we can use to inform the scheduler.
+    # - We want this scheduling to be enforced at the node level
+    #   (.i.e, topological domain = kubernetes.io/hostname)
+    # - This 'podAntiAffinity' rule complements the scheduler's 'topologySpreadConstraints' 
+    #   rule by strictly preventing to co-locate two such pods on the same node.
+    # - Warning: For the time being, it does not work with the label 'backingstore=noobaa' 
+    #   because we deploy 5 'bs-tmfs' pods and 1 'noobaa-default-backingstore' pods but 
+    #   we have only 5 nodes.
+    ## podAntiAffinity:
+    ##   requiredDuringSchedulingIgnoredDuringExecution:
+    ##     - labelSelector:
+    ##         matchExpressions:
+    ##           - key: pool
+    ##             operator: In
+    ##             values: # [INFO] Prefix match is not supported
+    ##               - bs-tmfs-3-0
+    ##               - bs-tmfs-3-1
+    ##               - bs-tmfs-5-0
+    ##               - bs-tmfs-5-1
+    ##       topologyKey: "kubernetes.io/hostname"
   # -------------------------------------------------------------
   # -- MAIN-CONTAINER
   # -------------------------------------------------------------
@@ -73,7 +80,17 @@ spec:
         - name: AGENT_CONFIG
         - name: NOOBAA_LOG_LEVEL
         - name: NOOBAA_LOG_COLOR
-      command: ["/noobaa_init_files/noobaa_init.sh", "agent"]
+        # Add Ceph admin keyring
+        - name: CEPH_ADMIN_KEY
+          valueFrom:
+            secretKeyRef:
+              name: tmfs-rook-ceph-admin-keyring
+              key: rook-ceph-admin-keyring
+      # [OBSO-20241223] command: ["/noobaa_init_files/noobaa_init.sh", "agent"]
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          /noobaa_init_files/noobaa_init.sh agent
       # Insert the relevant image for the agent
       ports:
         # This should change according to the allocation from the NooBaa server
@@ -83,13 +100,21 @@ spec:
           mountPath: /noobaa_storage
         - name: tmp-logs-vol
           mountPath: /usr/local/noobaa/logs
+      # OBSOLETE-20250107 securityContext:
+      # OBSOLETE-20250107   runAsNonRoot: true
+      # OBSOLETE-20250107   allowPrivilegeEscalation: false
       securityContext:
         privileged: false               # [20250103] field is new
         runAsNonRoot: true
         allowPrivilegeEscalation: true  # [20250103] was false
         capabilities:                   # [20250103] field is new
           add:                          # [20250103] field is new
-            - SYS_ADMIN                 # [20250103] field is new
+            - CAP_SYS_ADMIN             # [20250103] field is new
+      # Explicitly add and mount host devices to the container
+      #  (because the container is neither running in privileged mode nor as root)
+      volumeMounts:
+        - name: dev                     # [20250103] field is new
+          mountPath: /dev               # [20250103] field is new
   automountServiceAccountToken: false
   securityContext:
     runAsUser: 10001
@@ -97,6 +122,9 @@ spec:
     fsGroup: 0
     fsGroupChangePolicy: "OnRootMismatch"
   volumes:
+    - name: dev                         # [20250103] field is new
+      hostPath:                         # [20250103] field is new
+        path: /dev                      # [20250103] field is new
     - name: tmp-logs-vol
       emptyDir: {}
     - name: noobaastorage

@@ -1,9 +1,9 @@
 ###############################################################################
 # This manifest defines a customized NooBaa 'pod-agent' which embeds a Tiering
-# Management File System (TMFS) application for handling the migration and the 
-# recall of data between the 'noobaa-agent' pods (a.k.a. 'backingstore-tmfs'  
-# or 'bs-tmfs' pods) and a tape library. 
-# 
+# Management File System (TMFS) application for handling the migration and the
+# recall of data between the 'noobaa-agent' pods (a.k.a. 'backingstore-tmfs'
+# or 'bs-tmfs' pods) and a tape library.
+#
 # In essence, TMFS is a FUSE filesystem that passes the POSIX requests issued
 # by NooBaa down to the underlying base filesystem while interfacing with the
 # tape library to migrate and recall the data.
@@ -11,9 +11,10 @@
 # NOTES:
 #  - We use node anti-affinity rules to spread the BS-TMFS pods while ensuring
 #    the scheduling of no more than one BS-TMFS per node.
-#  - We use node affinity to solely schedule the BS-TMFS pods on nodes 
-#    equipped with a host buffer adapter (HBA).    
+#  - We use node affinity to solely schedule the BS-TMFS pods on nodes
+#    equipped with a host buffer adapter (HBA).
 ###############################################################################
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -24,47 +25,49 @@ spec:
   # -------------------------------------------------------------
   # -- AFFINITY
   # -------------------------------------------------------------
-  affinity:
-    # - We want this 'noobaa-agent' pod to be scheduled on a node that is equipped
-    #   with a host buffer adapter (HBA).
-    # - The nodes equipped with an HBA are identified by the label 'hba=fc'.
-    nodeAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-        nodeSelectorTerms:
-          - matchExpressions:
-              - key: hba
-                operator: In
-                values:
-                  - fc
-    # - We want to place no more than one 'bs-tmfs-X-Y-noobaa-pod-<UID>' pod per node.
-    # - Every  backingstore pod of type PV-POOL comes with the label 'pool=bs-tmfs-X-Y'
-    #   (with e.g., X=5, Y=0) that we can use to inform the scheduler.
-    # - We want this scheduling to be enforced at the node level
-    #   (.i.e, topological domain = kubernetes.io/hostname)
-    # - This 'podAntiAffinity' rule complements the scheduler's 'topologySpreadConstraints' 
-    #   rule by strictly preventing to co-locate two such pods on the same node.
-    # - Warning: For the time being, it does not work with the label 'backingstore=noobaa' 
-    #   because we deploy 5 'bs-tmfs' pods and 1 'noobaa-default-backingstore' pods but 
-    #   we have only 5 nodes.
-    ## podAntiAffinity:
-    ##   requiredDuringSchedulingIgnoredDuringExecution:
-    ##     - labelSelector:
-    ##         matchExpressions:
-    ##           - key: pool
-    ##             operator: In
-    ##             values: # [INFO] Prefix match is not supported
-    ##               - bs-tmfs-3-0
-    ##               - bs-tmfs-3-1
-    ##               - bs-tmfs-5-0
-    ##               - bs-tmfs-5-1
-    ##       topologyKey: "kubernetes.io/hostname"
+  # affinity:
+  #   # - We want this pod to be scheduled on a node that is equipped
+  #   #   with a host buffer adapter (HBA).
+  #   # - The nodes equipped with an HBA are identified by the label 'hba=fc'.
+  #   nodeAffinity:
+  #     requiredDuringSchedulingIgnoredDuringExecution:
+  #       nodeSelectorTerms:
+  #         - matchExpressions:
+  #             - key: hba
+  #               operator: In
+  #               values:
+  #                 - fc
+
+  #   # - We want to place no more than one 'bs-tmfs-X-Y-noobaa-pod-<UID>' pod per node.
+  #   # - Every  backingstore pod of type PV-POOL comes with the label 'pool=bs-tmfs-X-Y'
+  #   #   (with e.g., X=5, Y=0) that we can use to inform the scheduler.
+  #   # - We want this scheduling to be enforced at the node level
+  #   #   (.i.e, topological domain = kubernetes.io/hostname)
+  #   # - This 'podAntiAffinity' rule complements the scheduler's 'topologySpreadConstraints'
+  #   #   rule by strictly preventing to co-locate two such pods on the same node.
+  #   # - Warning: For the time being, it does not work with the label 'backingstore=noobaa'
+  #   #   because we deploy 5 'bs-tmfs' pods and 1 'noobaa-default-backingstore' pods but
+  #   #   we have only 5 nodes.
+  #   podAntiAffinity:
+  #     requiredDuringSchedulingIgnoredDuringExecution:
+  #       - labelSelector:
+  #           matchExpressions:
+  #             - key: pool
+  #               operator: In
+  #               values: # [INFO] Prefix match is not supported
+  #                 - bs-tmfs-3-0
+  #                 - bs-tmfs-3-1
+  #                 - bs-tmfs-5-0
+  #                 - bs-tmfs-5-1
+  #         topologyKey: "kubernetes.io/hostname"
+  
   # -------------------------------------------------------------
   # -- MAIN-CONTAINER
   # -------------------------------------------------------------
   containers:
     - name: noobaa-agent
       image: NOOBAA_CORE_IMAGE
-      imagePullPolicy: Always # [TMP-20241222] was IfNotPresent
+      imagePullPolicy: Always  # [TMP-20241222] was IfNotPresent
       resources:
         # https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
         requests:
@@ -80,17 +83,18 @@ spec:
         - name: AGENT_CONFIG
         - name: NOOBAA_LOG_LEVEL
         - name: NOOBAA_LOG_COLOR
-        # Add Ceph admin keyring
-        - name: CEPH_ADMIN_KEY
-          valueFrom:
-            secretKeyRef:
-              name: tmfs-rook-ceph-admin-keyring
-              key: rook-ceph-admin-keyring
-      # [OBSO-20241223] command: ["/noobaa_init_files/noobaa_init.sh", "agent"]
-      command: ["/bin/sh", "-c"]
-      args:
-        - |
-          /noobaa_init_files/noobaa_init.sh agent
+        # # Add Ceph admin keyring
+        # - name: CEPH_ADMIN_KEY
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: tmfs-rook-ceph-admin-keyring
+        #       key: rook-ceph-admin-keyring
+      command: ["/noobaa_init_files/noobaa_init.sh", "agent"]
+      ## [TODO] command: ["/bin/sh", "-c"]
+      ## [TODO] args:
+      ## [TODO]   - |
+      ## [TODO]     /noobaa_init_files/noobaa_init.sh agent
+
       # Insert the relevant image for the agent
       ports:
         # This should change according to the allocation from the NooBaa server
@@ -100,6 +104,7 @@ spec:
           mountPath: /noobaa_storage
         - name: tmp-logs-vol
           mountPath: /usr/local/noobaa/logs
+
       # OBSOLETE-20250107 securityContext:
       # OBSOLETE-20250107   runAsNonRoot: true
       # OBSOLETE-20250107   allowPrivilegeEscalation: false
@@ -109,12 +114,14 @@ spec:
         allowPrivilegeEscalation: true  # [20250103] was false
         capabilities:                   # [20250103] field is new
           add:                          # [20250103] field is new
-            - CAP_SYS_ADMIN             # [20250103] field is new
-      # Explicitly add and mount host devices to the container
-      #  (because the container is neither running in privileged mode nor as root)
-      volumeMounts:
-        - name: dev                     # [20250103] field is new
-          mountPath: /dev               # [20250103] field is new
+            - SYS_ADMIN                 # [20250103] field is new
+
+      # TODO-TRY # Explicitly add and mount host devices to the container
+      # TODO-TRY #  (because the container is neither running in privileged mode nor as root)
+      # TODO-TRY volumeMounts:
+      # TODO-TRY   - name: dev                     # [20250103] field is new
+      # TODO-TRY     mountPath: /dev               # [20250103] field is new
+
   automountServiceAccountToken: false
   securityContext:
     runAsUser: 10001
@@ -122,9 +129,9 @@ spec:
     fsGroup: 0
     fsGroupChangePolicy: "OnRootMismatch"
   volumes:
-    - name: dev                         # [20250103] field is new
-      hostPath:                         # [20250103] field is new
-        path: /dev                      # [20250103] field is new
+    ## TODO-TRY - name: dev                         # [20250103] field is new
+    ## TODO-TRY   hostPath:                         # [20250103] field is new
+    ## TODO-TRY     path: /dev                      # [20250103] field is new
     - name: tmp-logs-vol
       emptyDir: {}
     - name: noobaastorage

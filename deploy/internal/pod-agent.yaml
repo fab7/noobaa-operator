@@ -25,18 +25,18 @@ spec:
   # -------------------------------------------------------------
   # -- AFFINITY
   # -------------------------------------------------------------
-  # affinity:
-  #   # - We want this pod to be scheduled on a node that is equipped
-  #   #   with a host buffer adapter (HBA).
-  #   # - The nodes equipped with an HBA are identified by the label 'hba=fc'.
-  #   nodeAffinity:
-  #     requiredDuringSchedulingIgnoredDuringExecution:
-  #       nodeSelectorTerms:
-  #         - matchExpressions:
-  #             - key: hba
-  #               operator: In
-  #               values:
-  #                 - fc
+  affinity:
+    # - We want this pod to be scheduled on a node that is equipped
+    #   with a host buffer adapter (HBA).
+    # - The nodes equipped with an HBA are identified by the label 'hba=fc'.
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: hba
+                operator: In
+                values:
+                  - fc
 
   #   # - We want to place no more than one 'bs-tmfs-X-Y-noobaa-pod-<UID>' pod per node.
   #   # - Every  backingstore pod of type PV-POOL comes with the label 'pool=bs-tmfs-X-Y'
@@ -60,14 +60,14 @@ spec:
   #                 - bs-tmfs-5-0
   #                 - bs-tmfs-5-1
   #         topologyKey: "kubernetes.io/hostname"
-  
+
   # -------------------------------------------------------------
   # -- MAIN-CONTAINER
   # -------------------------------------------------------------
   containers:
     - name: noobaa-agent
       image: NOOBAA_CORE_IMAGE
-      imagePullPolicy: Always  # [TMP-20241222] was IfNotPresent
+      imagePullPolicy: Always  # was IfNotPresent
       resources:
         # https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
         requests:
@@ -83,18 +83,16 @@ spec:
         - name: AGENT_CONFIG
         - name: NOOBAA_LOG_LEVEL
         - name: NOOBAA_LOG_COLOR
-        # # Add Ceph admin keyring
-        # - name: CEPH_ADMIN_KEY
-        #   valueFrom:
-        #     secretKeyRef:
-        #       name: tmfs-rook-ceph-admin-keyring
-        #       key: rook-ceph-admin-keyring
-      command: ["/noobaa_init_files/noobaa_init.sh", "agent"]
-      ## [TODO] command: ["/bin/sh", "-c"]
-      ## [TODO] args:
-      ## [TODO]   - |
-      ## [TODO]     /noobaa_init_files/noobaa_init.sh agent
-
+        # Add Ceph admin keyring
+        - name: CEPH_ADMIN_KEY
+          valueFrom:
+            secretKeyRef:
+              name: tmfs-rook-ceph-admin-keyring
+              key: rook-ceph-admin-keyring
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          /noobaa_init_files/noobaa_init.sh agent
       # Insert the relevant image for the agent
       ports:
         # This should change according to the allocation from the NooBaa server
@@ -104,24 +102,18 @@ spec:
           mountPath: /noobaa_storage
         - name: tmp-logs-vol
           mountPath: /usr/local/noobaa/logs
-
-      # OBSOLETE-20250107 securityContext:
-      # OBSOLETE-20250107   runAsNonRoot: true
-      # OBSOLETE-20250107   allowPrivilegeEscalation: false
+        # Explicitly add and mount host devices to the container
+        #  (because the container is neither running in privilege mode nor as root)
+        - name: dev                     # [20250110] is new
+          mountPath: /dev               # [20250110] is new
+          readOnly: false               # [20250110] is new
       securityContext:
-        privileged: false               # [20250103] field is new
+        # privileged: false             # [20250103] field is new
         runAsNonRoot: true
         allowPrivilegeEscalation: true  # [20250103] was false
-        capabilities:                   # [20250103] field is new
-          add:                          # [20250103] field is new
-            - SYS_ADMIN                 # [20250103] field is new
-
-      # TODO-TRY # Explicitly add and mount host devices to the container
-      # TODO-TRY #  (because the container is neither running in privileged mode nor as root)
-      # TODO-TRY volumeMounts:
-      # TODO-TRY   - name: dev                     # [20250103] field is new
-      # TODO-TRY     mountPath: /dev               # [20250103] field is new
-
+        capabilities:                   # [20250103] is new
+          add:                          # [20250103] is new
+            - SYS_ADMIN                 # [20250103] is new
   automountServiceAccountToken: false
   securityContext:
     runAsUser: 10001
@@ -129,11 +121,11 @@ spec:
     fsGroup: 0
     fsGroupChangePolicy: "OnRootMismatch"
   volumes:
-    ## TODO-TRY - name: dev                         # [20250103] field is new
-    ## TODO-TRY   hostPath:                         # [20250103] field is new
-    ## TODO-TRY     path: /dev                      # [20250103] field is new
     - name: tmp-logs-vol
       emptyDir: {}
     - name: noobaastorage
       persistentVolumeClaim:
         claimName: noobaa-pv-claim
+    - name: dev                         # [20250110] field is new
+      hostPath:                         # [20250110] field is new
+        path: /dev                      # [20250110] field is new

@@ -25,18 +25,18 @@ spec:
   # -------------------------------------------------------------
   # -- AFFINITY
   # -------------------------------------------------------------
-  affinity:
-    # - We want this pod to be scheduled on a node that is equipped
-    #   with a host buffer adapter (HBA).
-    # - The nodes equipped with an HBA are identified by the label 'hba=fc'.
-    nodeAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-        nodeSelectorTerms:
-          - matchExpressions:
-              - key: hba
-                operator: In
-                values:
-                  - fc
+  # affinity:
+  #   # - We want this pod to be scheduled on a node that is equipped
+  #   #   with a host buffer adapter (HBA).
+  #   # - The nodes equipped with an HBA are identified by the label 'hba=fc'.
+  #   nodeAffinity:
+  #     requiredDuringSchedulingIgnoredDuringExecution:
+  #       nodeSelectorTerms:
+  #         - matchExpressions:
+  #             - key: hba
+  #               operator: In
+  #               values:
+  #                 - fc
 
   #   # - We want to place no more than one 'bs-tmfs-X-Y-noobaa-pod-<UID>' pod per node.
   #   # - Every  backingstore pod of type PV-POOL comes with the label 'pool=bs-tmfs-X-Y'
@@ -89,8 +89,9 @@ spec:
             secretKeyRef:
               name: tmfs-rook-ceph-admin-keyring
               key: rook-ceph-admin-keyring
+      # [OBSOLETE] command: ["/noobaa_init_files/noobaa_init.sh", "agent"]      
       command: ["/bin/sh", "-c"]
-      args:
+      args: 
         - |
           /noobaa_init_files/noobaa_init.sh agent
       # Insert the relevant image for the agent
@@ -98,34 +99,45 @@ spec:
         # This should change according to the allocation from the NooBaa server
         - containerPort: 60101
       volumeMounts:
+        # BS-related volumes
         - name: noobaastorage
           mountPath: /noobaa_storage
         - name: tmp-logs-vol
           mountPath: /usr/local/noobaa/logs
+        # TMFS-related volumes
+        # - name: tmfs-init-vol
+        #   mountPath: /tmfs_init_files
         # Explicitly add and mount host devices to the container
         #  (because the container is neither running in privilege mode nor as root)
-        - name: dev                     # [20250110] is new
-          mountPath: /dev               # [20250110] is new
-          readOnly: false               # [20250110] is new
+        # - name: dev                     # [20250110] is new
+        #   mountPath: /dev               # [20250110] is new
+        #   readOnly: false               # [20250110] is new
       securityContext:
-        # privileged: false             # [20250103] field is new
+        allowPrivilegeEscalation: true    # was false
         runAsNonRoot: true
-        allowPrivilegeEscalation: true  # [20250103] was false
-        capabilities:                   # [20250103] is new
-          add:                          # [20250103] is new
-            - SYS_ADMIN                 # [20250103] is new
+        # capabilities:                     # [20250103] is new
+        #   add:                            # [20250103] is new
+        #     - CAP_SYS_ADMIN               # [20250103] is new
+        # privileged: false               # [20250110] is new and true won't work
   automountServiceAccountToken: false
   securityContext:
     runAsUser: 10001
     runAsGroup: 0
     fsGroup: 0
     fsGroupChangePolicy: "OnRootMismatch"
+  # -------------------------------------------------------------
+  # -- VOLUMES
+  # -------------------------------------------------------------
   volumes:
+    # BS-related volumes
     - name: tmp-logs-vol
       emptyDir: {}
     - name: noobaastorage
       persistentVolumeClaim:
         claimName: noobaa-pv-claim
-    - name: dev                         # [20250110] field is new
-      hostPath:                         # [20250110] field is new
-        path: /dev                      # [20250110] field is new
+    # TMFS-related volumes
+    # - name: tmfs-init-vol
+    #   emptyDir: {}
+    # - name: dev                         # [20250110] field is new
+    #   hostPath:                         # [20250110] field is new
+    #     path: /dev                      # [20250110] field is new

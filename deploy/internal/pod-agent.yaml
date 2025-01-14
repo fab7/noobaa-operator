@@ -88,8 +88,7 @@ spec:
           valueFrom:
             secretKeyRef:
               name: tmfs-rook-ceph-admin-keyring
-              key: rook-ceph-admin-keyring
-      # [OBSOLETE] command: ["/noobaa_init_files/noobaa_init.sh", "agent"]      
+              key: rook-ceph-admin-keyring 
       command: ["/bin/sh", "-c"]
       args: 
         - |
@@ -114,11 +113,11 @@ spec:
         #   readOnly: false               # [20250110] is new
       securityContext:
         allowPrivilegeEscalation: true    # was false
-        runAsNonRoot: true
-        # capabilities:                     # [20250103] is new
-        #   add:                            # [20250103] is new
-        #     - CAP_SYS_ADMIN               # [20250103] is new
-        # privileged: false               # [20250110] is new and true won't work
+        # runAsNonRoot: true              # [20250113] commented out
+        capabilities:                     # [20250113] is new
+          add:                            # [20250113] is new
+            - CAP_SYS_ADMIN               # [20250113] is new
+        privileged: true                  # [20250113] is new and true won't work
   automountServiceAccountToken: false
   securityContext:
     runAsUser: 10001

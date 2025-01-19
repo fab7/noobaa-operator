@@ -5,7 +5,7 @@
 # to https://quay.io/repository/fab/noobaa-operator-tmfs.
 #
 # The script is expected to be run after a NooBaa-Operator build done by:
-#      $ make image
+#      $ make clean; make gen-api; make clean
 # 
 
 echo

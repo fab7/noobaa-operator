@@ -173,6 +173,8 @@ else
     echo -e "\t The medium changer device is: '${CHANGER}' "
     echo -e "\t The tape drive device is    : '${TAPE_DRIVES[0]}' "
     echo
+    # Add some user specific alias for 'tmadm' command
+    echo "alias tmadm='tmadm --mount-point=${TMFS_DATA_DIR}' " >> /home/noob/.bashrc
     # Note: Allow non-root user to access Fuse filesystem is done during 'noobaa-core' build
     if true; then
         echo "#-- Starting TMFS ----------------------------------------"

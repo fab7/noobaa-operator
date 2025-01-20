@@ -77,23 +77,37 @@ spec:
       args:
         - |
           echo "#-- Start of initContainer -------------------------------"
-          echo "#--- Make the TMFS init files writable during bring-up ---"
-          cp /tmfs/tmfs_init_files/tmfs_init.sh /tmfs/tmfs_init.sh
-          echo "#--- Changing the ownership of the TMFS init files -------"
-          chown noob:root /tmfs/tmfs_init.sh
-          echo "#--- Changing the permissions of the TMFS init files -----"
-          chmod +x /tmfs/tmfs_init.sh
-          echo "#--- Setting the Setgid bit ------------------------------"
-          # [TODO - Should be moved in the Dockerfile]
+          echo
+          echo "#-- Create TMFS directories ------------------------------"
+          sudo mkdir -p /tmfs
+          sudo mkdir -p /tmfs/tmfs_db
+          sudo mkdir -p /tmfs/tmfs_init_files
+          sudo mkdir -p /tmfs/tmfs_logs
+          echo
+          echo "#-- Set 'noob' ownership to the TMFS directories ---------"
+          sudo chmod -R 770 /tmfs
+          sudo chgrp -R 0   /tmfs
+          sudo chown -R noob:root /tmfs
+          echo
+          echo "#-- Set the Setgid bit -----------------------------------"
           chmod g+s /tmfs/tmfs_db
           chmod g+s /tmfs/tmfs_logs
-          #--- Add some user specific aliases ------------------------------"
-          echo "alias tmadm='tmadm --mount-point=/noobaa_storage'" >> /home/noob/.bashrc
-          echo "alias tmadm='tmadm --mount-point=/noobaa_storage'" >> /root/.bashrc
+          echo
+          echo "#-- Make the TMFS init files writable during bring-up ----"
+          cp /tmfs/tmfs_init_files/tmfs_init.sh /tmfs/tmfs_init.sh
+          chown noob:root /tmfs/tmfs_init.sh
+          chmod +x /tmfs/tmfs_init.sh
+          echo
           echo "#-- End of initContainer ---------------------------------"
       volumeMounts:
+        - name: tmfs-vol
+          mountPath: /tmfs
+        - name: tmfs-db-vol
+          mountPath: /tmfs/tmfs_db
         - name: tmfs-init-vol
           mountPath: /tmfs/tmfs_init_files
+        - name: tmfs-logs-vol
+          mountPath: /tmfs/tmfs_logs
 
   # -------------------------------------------------------------
   # -- MAIN-CONTAINER
@@ -138,8 +152,15 @@ spec:
         - name: tmp-logs-vol
           mountPath: /usr/local/noobaa/logs
         # TMFS-related volumes
+        - name: tmfs-vol
+          mountPath: /tmfs
+        - name: tmfs-db-vol
+          mountPath: /tmfs/tmfs_db
         - name: tmfs-init-vol
           mountPath: /tmfs/tmfs_init_files
+        - name: tmfs-logs-vol
+          mountPath: /tmfs/tmfs_logs
+
         # [FIXME] - name: tmfsdbstorage
         # [FIXME] mountPath: /tmfs/tmfs_db
 
@@ -172,13 +193,19 @@ spec:
       persistentVolumeClaim:
         claimName: noobaa-pv-claim
     # TMFS-related volumes
+    - name: tmfs-vol
+      emptyDir: {}
+    - name: tmfs-db-vol
+      emptyDir: {}
     - name: tmfs-init-vol
       configMap:
         name: tmfs-init
+    - name: tmfs-logs-vol
+      emptyDir: {}
     # [FIXME] - name: tmfsdbstorage
     # [FIXME]   persistentVolumeClaim:
     # [FIXME]     claimName: tmfsdb-pv-claim
 
-    # [TO-TRY] - name: dev                         # [20250110] field is new
-    # [TO-TRY]   hostPath:                         # [20250110] field is new
-    # [TO-TRY]     path: /dev                      # [20250110] field is new
+    # [TO-TRY] - name: dev
+    # [TO-TRY]   hostPath:
+    # [TO-TRY]     path: /dev

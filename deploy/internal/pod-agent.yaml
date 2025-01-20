@@ -62,6 +62,40 @@ spec:
   #         topologyKey: "kubernetes.io/hostname"
 
   # -------------------------------------------------------------
+  # -- INIT-CONTAINER
+  # -------------------------------------------------------------
+  initContainers:
+    - name: tmfs-agent-init
+      image: quay.io/fab/alpine-kubectl:1.30  # A lightweight image (71.6MB)
+      imagePullPolicy: IfNotPresent  # Always
+      # securityContext:
+      #   privileged: true
+      #   capabilities:
+      #    add:
+      #       - SYS_ADMIN
+      command: ['/bin/sh', '-c']
+      args:
+        - |
+          echo "#-- Start of initContainer -------------------------------"
+          echo "#--- Make the TMFS init files writable during bring-up ---"
+          cp /tmfs/tmfs_init_files/tmfs_init.sh /tmfs/tmfs_init.sh
+          echo "#--- Changing the ownership of the TMFS init files -------"
+          chown noob:root /tmfs/tmfs_init.sh
+          echo "#--- Changing the permissions of the TMFS init files -----"
+          chmod +x /tmfs/tmfs_init.sh
+          echo "#--- Setting the Setgid bit ------------------------------"
+          # [TODO - Should be moved in the Dockerfile]
+          chmod g+s /tmfs/tmfs_db
+          chmod g+s /tmfs/tmfs_logs
+          #--- Add some user specific aliases ------------------------------"
+          echo "alias tmadm='tmadm --mount-point=/noobaa_storage'" >> /home/noob/.bashrc
+          echo "alias tmadm='tmadm --mount-point=/noobaa_storage'" >> /root/.bashrc
+          echo "#-- End of initContainer ---------------------------------"
+      volumeMounts:
+        - name: tmfs-init-vol
+          mountPath: /tmfs/tmfs_init_files
+
+  # -------------------------------------------------------------
   # -- MAIN-CONTAINER
   # -------------------------------------------------------------
   containers:
@@ -104,8 +138,10 @@ spec:
         - name: tmp-logs-vol
           mountPath: /usr/local/noobaa/logs
         # TMFS-related volumes
-        # - name: tmfs-init-vol
-        #   mountPath: /tmfs_init_files
+        - name: tmfs-init-vol
+          mountPath: /tmfs/tmfs_init_files
+        # - name: tmfsdbstorage
+        #   mountPath: /tmfs/tmfs_db
         # Explicitly add and mount host devices to the container
         #  (because the container is neither running in privilege mode nor as root)
         # - name: dev                     # [20250110] is new
@@ -135,8 +171,13 @@ spec:
       persistentVolumeClaim:
         claimName: noobaa-pv-claim
     # TMFS-related volumes
-    # - name: tmfs-init-vol
-    #   emptyDir: {}
+    - name: tmfs-init-vol
+      configMap:
+        name: tmfs-init
+    # - name: tmfsdbstorage
+    #   persistentVolumeClaim:
+    #     claimName: tmfsdb-pv-claim
+
     # - name: dev                         # [20250110] field is new
     #   hostPath:                         # [20250110] field is new
     #     path: /dev                      # [20250110] field is new

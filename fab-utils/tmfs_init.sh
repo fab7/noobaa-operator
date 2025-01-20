@@ -29,12 +29,23 @@ fi
 
 echo "#-- Setting the TMFS work directory ----------------------"
 export TMFS_WORK_DIR="/tmfs/tmfs_db"
-mkdir -p /tmfs/tmfs_db
+mkdir -p ${TMFS_WORK_DIR}
 if [ $? -ne 0 ]; then
-    echo "[ERROR] Failed to create directory /tmfs/tmfs_db"
+    echo "[ERROR] Failed to create directory '${TMFS_WORK_DIR}' "
     exit 1
 elif [ ${VERBOSE} -eq 1 ]; then
-    echo "[INFO] TMFS_WORK_DIR directory is: '${TMFS_WORK_DIR}'"
+    echo "[INFO] TMFS_WORK_DIR directory is: '${TMFS_WORK_DIR}' "
+    echo
+fi
+
+echo "#-- Setting the TMFS log directory -----------------------"
+export TMFS_LOG_DIR="/tmfs/tmfs_logs"
+mkdir -p ${TMFS_LOG_DIR}
+if [ $? -ne 0 ]; then
+    echo "[ERROR] Failed to create directory '${TMFS_LOG_DIR}' "
+    exit 1
+elif [ ${VERBOSE} -eq 1 ]; then
+    echo "[INFO] TMFS_LOG_DIR directory is: '${TMFS_LOG_DIR}' "
     echo
 fi
 
@@ -156,6 +167,7 @@ else
     echo "[INFO] Summary of the TMFS settings:"
     echo -e "\t TMFS data directory is      : '${TMFS_DATA_DIR}' "
     echo -e "\t TMFS work directory is      : '${TMFS_WORK_DIR}' "
+    echo -e "\t TMFS log  directory is      : '${TMFS_LOG_DIR}' "
     echo -e "\t BASEDEV is                  : '${BASEDEV}' "
     echo -e "\t The TMFS mount options are  : '${MOUNT_OPTIONS}' "
     echo -e "\t The medium changer device is: '${CHANGER}' "
@@ -177,13 +189,15 @@ else
         fi
         # Starting TMFS
         if [ ${VERBOSE} -eq 1 ]; then
-            sudo /usr/local/bin/tmfs -f -o allow_other -o basedev="${BASEDEV}" \
+            sudo TMFS_WORK_DIR=${TMFS_WORK_DIR} /usr/local/bin/tmfs -f \
+                -o allow_other -o basedev="${BASEDEV}" \
                 -o mountoptions="${MOUNT_OPTIONS}" -o changer_devname="${CHANGER}" \
                 -o mig_wait_sec=0 ${TMFS_DATA_DIR}
         else
-            sudo /usr/local/bin/tmfs    -o allow_other -o basedev="${BASEDEV}" \
+            sudo TMFS_WORK_DIR=${TMFS_WORK_DIR} /usr/local/bin/tmfs \
+                -o allow_other -o basedev="${BASEDEV}" \
                 -o mountoptions="${MOUNT_OPTIONS}" -o changer_devname="${CHANGER}" \
-                -o mig_wait_sec=0 ${TMFS_DATA_DIR}  > "/tmfs/tmfs_log/tmfs.log" 2>&1
+                -o mig_wait_sec=0 ${TMFS_DATA_DIR}  > "${TMFS_LOG_DIR}/tmfs.log" 2>&1
         fi
     else
         echo "[WARNING] Skipping TMFS launch for the time being..."

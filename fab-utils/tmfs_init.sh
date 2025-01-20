@@ -39,7 +39,7 @@ elif [ ${VERBOSE} -eq 1 ]; then
 fi
 
 echo "#-- Setting BASEDEV --------------------------------------"
-BASEDEV=$(findmnt -n -o SOURCE -M /noobaa_storage) # [TODO-FIXME] ${TMFS_DATA_DIR}
+BASEDEV=$(findmnt -n -o SOURCE -M ${TMFS_DATA_DIR})
 export BASEDEV=$(echo ${BASEDEV} | sed 's/,/\\,/g')
 if [ -z "${BASEDEV}" ]; then
     echo "[ERROR] BASEDEV is is empty."
@@ -154,13 +154,15 @@ then
 else   
     # Recap all the settings
     echo "[INFO] Summary of the TMFS settings:"
+    echo -e "\t TMFS data directory is      : '${TMFS_DATA_DIR}' "
+    echo -e "\t TMFS work directory is      : '${TMFS_WORK_DIR}' "
     echo -e "\t BASEDEV is                  : '${BASEDEV}' "
     echo -e "\t The TMFS mount options are  : '${MOUNT_OPTIONS}' "
     echo -e "\t The medium changer device is: '${CHANGER}' "
     echo -e "\t The tape drive device is    : '${TAPE_DRIVES[0]}' "
     echo
     # Note: Allow non-root user to access Fuse filesystem is done during 'noobaa-core' build
-    if false; then
+    if true; then
         echo "#-- Starting TMFS ----------------------------------------"
         # Unmounting ${TMFS_DATA_DIR}
         if mountpoint -q ${TMFS_DATA_DIR}; then
@@ -175,13 +177,13 @@ else
         fi
         # Starting TMFS
         if [ ${VERBOSE} -eq 1 ]; then
-            /usr/local/bin/tmfs -f -o allow_other -o basedev="${BASEDEV}" \
+            sudo /usr/local/bin/tmfs -f -o allow_other -o basedev="${BASEDEV}" \
                 -o mountoptions="${MOUNT_OPTIONS}" -o changer_devname="${CHANGER}" \
                 -o mig_wait_sec=0 ${TMFS_DATA_DIR}
         else
-            /usr/local/bin/tmfs -o allow_other -o basedev="${BASEDEV}" \
+            sudo /usr/local/bin/tmfs    -o allow_other -o basedev="${BASEDEV}" \
                 -o mountoptions="${MOUNT_OPTIONS}" -o changer_devname="${CHANGER}" \
-                -o mig_wait_sec=0 ${TMFS_DATA_DIR}  > "/tmp/tmfs_init.log" 2>&1 &
+                -o mig_wait_sec=0 ${TMFS_DATA_DIR}  > "/tmfs/tmfs_log/tmfs.log" 2>&1
         fi
     else
         echo "[WARNING] Skipping TMFS launch for the time being..."

@@ -140,13 +140,14 @@ spec:
         # TMFS-related volumes
         - name: tmfs-init-vol
           mountPath: /tmfs/tmfs_init_files
-        # - name: tmfsdbstorage
-        #   mountPath: /tmfs/tmfs_db
-        # Explicitly add and mount host devices to the container
-        #  (because the container is neither running in privilege mode nor as root)
-        # - name: dev                     # [20250110] is new
-        #   mountPath: /dev               # [20250110] is new
-        #   readOnly: false               # [20250110] is new
+        # [FIXME] - name: tmfsdbstorage
+        # [FIXME] mountPath: /tmfs/tmfs_db
+
+        # [TO-TRY] Explicitly add and mount host devices to the container
+        # [TO-TRY]  (because the container is neither running in privilege mode nor as root)
+        # [TO-TRY] - name: dev                     # [20250110] is new
+        # [TO-TRY]   mountPath: /dev               # [20250110] is new
+        # [TO-TRY]   readOnly: false               # [20250110] is new
       securityContext:
         allowPrivilegeEscalation: true    # was false
         # runAsNonRoot: true              # [20250113] commented out
@@ -174,10 +175,10 @@ spec:
     - name: tmfs-init-vol
       configMap:
         name: tmfs-init
-    # - name: tmfsdbstorage
-    #   persistentVolumeClaim:
-    #     claimName: tmfsdb-pv-claim
+    # [FIXME] - name: tmfsdbstorage
+    # [FIXME]   persistentVolumeClaim:
+    # [FIXME]     claimName: tmfsdb-pv-claim
 
-    # - name: dev                         # [20250110] field is new
-    #   hostPath:                         # [20250110] field is new
-    #     path: /dev                      # [20250110] field is new
+    # [TO-TRY] - name: dev                         # [20250110] field is new
+    # [TO-TRY]   hostPath:                         # [20250110] field is new
+    # [TO-TRY]     path: /dev                      # [20250110] field is new

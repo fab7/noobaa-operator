@@ -1,3 +1,4 @@
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -10,3 +11,19 @@ spec:
   resources:
     requests:
       storage: 30Gi
+# [FIXME] ---
+# [FIXME] apiVersion: v1
+# [FIXME] kind: PersistentVolumeClaim
+# [FIXME] metadata:
+# [FIXME]   labels:
+# [FIXME]     app: noobaa
+# [FIXME]     module: db-tmfs
+# [FIXME]   name: tmfsdb-pv-claim
+# [FIXME]   namespace: noobaa
+# [FIXME] spec:
+# [FIXME]   storageClassName: rook-cephfs
+# [FIXME]   accessModes:
+# [FIXME]     - ReadWriteOncePod
+# [FIXME]   resources:
+# [FIXME]     requests:
+# [FIXME]       storage: 100 Mi  # [TODO] Should be configurable

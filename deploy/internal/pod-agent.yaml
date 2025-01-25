@@ -78,36 +78,28 @@ spec:
         - |
           echo "#-- Start of initContainer -------------------------------"
           echo
-          echo "#-- Create TMFS directories ------------------------------"
-          sudo mkdir -p /tmfs
-          sudo mkdir -p /tmfs/tmfs_db
-          sudo mkdir -p /tmfs/tmfs_init_files
-          sudo mkdir -p /tmfs/tmfs_logs
-          echo
-          echo "#-- Set 'noob' ownership to the TMFS directories ---------"
-          sudo chmod -R 770 /tmfs
-          sudo chgrp -R 0   /tmfs
-          sudo chown -R noob:root /tmfs
-          echo
-          echo "#-- Set the Setgid bit -----------------------------------"
-          chmod g+s /tmfs/tmfs_db
-          chmod g+s /tmfs/tmfs_logs
-          echo
-          echo "#-- Make the TMFS init files writable during bring-up ----"
-          cp /tmfs/tmfs_init_files/tmfs_init.sh /tmfs/tmfs_init.sh
-          chown noob:root /tmfs/tmfs_init.sh
-          chmod +x /tmfs/tmfs_init.sh
-          echo
+          # [OBSOLETE] echo "#-- Create TMFS directories ------------------------------"
+          # [OBSOLETE] sudo mkdir -p /tmfs_db
+          # [OBSOLETE] sudo mkdir -p /tmfs_init_files
+          # [OBSOLETE] sudo mkdir -p /tmfs_logs
+          # [OBSOLETE] echo
+          # [OBSOLETE] echo "#-- Set 'noob' ownership to the TMFS directories ---------"
+          # [OBSOLETE] sudo chmod -R 770 /tmfs_db
+          # [OBSOLETE] sudo chgrp -R 0   /tmfs_db
+          # [OBSOLETE] sudo chown -R noob:root /tmfs_db
+          # [OBSOLETE] echo
+          # [OBSOLETE] echo "#-- Set the Setgid bit -----------------------------------"
+          # [OBSOLETE] chmod g+s /tmfs_db
+          # [OBSOLETE] chmod g+s /tmfs_logs
+          # [OBSOLETE] echo          
           echo "#-- End of initContainer ---------------------------------"
       volumeMounts:
-        - name: tmfs-vol
-          mountPath: /tmfs
-        - name: tmfs-db-vol
-          mountPath: /tmfs/tmfs_db
+        # [OBSOLETE] - name: tmfs-db-vol
+        # [OBSOLETE]   mountPath: /tmfs_db
         - name: tmfs-init-vol
-          mountPath: /tmfs/tmfs_init_files
-        - name: tmfs-logs-vol
-          mountPath: /tmfs/tmfs_logs
+          mountPath: /tmfs_init_files
+        # [OBSOLETE] - name: tmfs-logs-vol
+        # [OBSOLETE]   mountPath: /tmfs_logs
 
   # -------------------------------------------------------------
   # -- MAIN-CONTAINER
@@ -116,7 +108,7 @@ spec:
     - name: noobaa-agent
       image: NOOBAA_CORE_IMAGE
       imagePullPolicy: Always  # was IfNotPresent
-      resources:
+      resources: # ----------------------------------------------
         # https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
         requests:
           cpu: "999m"
@@ -124,7 +116,7 @@ spec:
         limits:
           cpu: "999m"
           memory: "1Gi"
-      env:
+      env: # ----------------------------------------------------
         # Insert the relevant config for the current agent
         - name: CONTAINER_PLATFORM
           value: KUBERNETES
@@ -136,40 +128,36 @@ spec:
           valueFrom:
             secretKeyRef:
               name: tmfs-rook-ceph-admin-keyring
-              key: rook-ceph-admin-keyring 
-      command: ["/bin/sh", "-c"]
+              key: rook-ceph-admin-keyring
+      command: ["/bin/sh", "-c"]  # -----------------------------
       args: 
         - |
           /noobaa_init_files/noobaa_init.sh agent
-      # Insert the relevant image for the agent
-      ports:
+          echo "#-- Make the TMFS init files writable during bring-up"
+          cp /tmfs_init_files/tmfs_init.sh /tmp/tmfs_init.sh
+          chmod +x /tmp/tmfs_init.sh
+      ports: # --------------------------------------------------
         # This should change according to the allocation from the NooBaa server
         - containerPort: 60101
-      volumeMounts:
+      volumeMounts: # -------------------------------------------
         # BS-related volumes
         - name: noobaastorage
           mountPath: /noobaa_storage
         - name: tmp-logs-vol
           mountPath: /usr/local/noobaa/logs
         # TMFS-related volumes
-        - name: tmfs-vol
-          mountPath: /tmfs
-        - name: tmfs-db-vol
-          mountPath: /tmfs/tmfs_db
+        - name: tmfsdbstorage
+          mountPath: /tmfs_db
         - name: tmfs-init-vol
-          mountPath: /tmfs/tmfs_init_files
+          mountPath: /tmfs_init_files
         - name: tmfs-logs-vol
-          mountPath: /tmfs/tmfs_logs
-
-        # [FIXME] - name: tmfsdbstorage
-        # [FIXME] mountPath: /tmfs/tmfs_db
-
-        # [TO-TRY] Explicitly add and mount host devices to the container
-        # [TO-TRY]  (because the container is neither running in privilege mode nor as root)
-        # [TO-TRY] - name: dev                     # [20250110] is new
-        # [TO-TRY]   mountPath: /dev               # [20250110] is new
-        # [TO-TRY]   readOnly: false               # [20250110] is new
-      securityContext:
+          mountPath: /tmfs_logs
+          # [TO-TRY] Explicitly add and mount host devices to the container
+          # [TO-TRY]  (because the container is neither running in privilege mode nor as root)
+          # [TO-TRY] - name: dev                     # [20250110] is new
+          # [TO-TRY]   mountPath: /dev               # [20250110] is new
+          # [TO-TRY]   readOnly: false               # [20250110] is new
+      securityContext: # ----------------------------------------
         allowPrivilegeEscalation: true    # was false
         # runAsNonRoot: true              # [20250113] commented out
         capabilities:                     # [20250113] is new
@@ -193,18 +181,14 @@ spec:
       persistentVolumeClaim:
         claimName: noobaa-pv-claim
     # TMFS-related volumes
-    - name: tmfs-vol
-      emptyDir: {}
-    - name: tmfs-db-vol
-      emptyDir: {}
+    - name: tmfsdbstorage
+      persistentVolumeClaim:
+        claimName: tmfsdb-pv-claim
     - name: tmfs-init-vol
       configMap:
         name: tmfs-init
     - name: tmfs-logs-vol
       emptyDir: {}
-    # [FIXME] - name: tmfsdbstorage
-    # [FIXME]   persistentVolumeClaim:
-    # [FIXME]     claimName: tmfsdb-pv-claim
 
     # [TO-TRY] - name: dev
     # [TO-TRY]   hostPath:

@@ -75,13 +75,14 @@ type Reconciler struct {
 	Recorder record.EventRecorder
 	NBClient nb.Client
 
-	BackingStore     *nbv1.BackingStore
-	NooBaa           *nbv1.NooBaa
-	Secret           *corev1.Secret
-	PodAgentTemplate *corev1.Pod
-	PvcAgentTemplate *corev1.PersistentVolumeClaim
-	ServiceAccount   *corev1.ServiceAccount
-	CoreAppConfig    *corev1.ConfigMap
+	BackingStore         *nbv1.BackingStore
+	NooBaa               *nbv1.NooBaa
+	Secret               *corev1.Secret
+	PodAgentTemplate     *corev1.Pod
+	PvcAgentTemplate     *corev1.PersistentVolumeClaim
+	TmfsPvcAgentTemplate *corev1.PersistentVolumeClaim
+	ServiceAccount       *corev1.ServiceAccount
+	CoreAppConfig        *corev1.ConfigMap
 
 	SystemInfo             *nb.SystemInfo
 	ExternalConnectionInfo *nb.ExternalConnectionInfo
@@ -107,21 +108,21 @@ func NewReconciler(
 	scheme *runtime.Scheme,
 	recorder record.EventRecorder,
 ) *Reconciler {
-
 	r := &Reconciler{
-		Request:          req,
-		Client:           client,
-		Scheme:           scheme,
-		Recorder:         recorder,
-		Ctx:              context.TODO(),
-		Logger:           logrus.WithField("backingstore", req.Namespace+"/"+req.Name),
-		BackingStore:     util.KubeObject(bundle.File_deploy_crds_noobaa_io_v1alpha1_backingstore_cr_yaml).(*nbv1.BackingStore),
-		NooBaa:           util.KubeObject(bundle.File_deploy_crds_noobaa_io_v1alpha1_noobaa_cr_yaml).(*nbv1.NooBaa),
-		Secret:           util.KubeObject(bundle.File_deploy_internal_secret_empty_yaml).(*corev1.Secret),
-		ServiceAccount:   util.KubeObject(bundle.File_deploy_service_account_yaml).(*corev1.ServiceAccount),
-		CoreAppConfig:    util.KubeObject(bundle.File_deploy_internal_configmap_empty_yaml).(*corev1.ConfigMap),
-		PodAgentTemplate: util.KubeObject(bundle.File_deploy_internal_pod_agent_yaml).(*corev1.Pod),
-		PvcAgentTemplate: util.KubeObject(bundle.File_deploy_internal_pvc_agent_yaml).(*corev1.PersistentVolumeClaim),
+		Request:              req,
+		Client:               client,
+		Scheme:               scheme,
+		Recorder:             recorder,
+		Ctx:                  context.TODO(),
+		Logger:               logrus.WithField("backingstore", req.Namespace+"/"+req.Name),
+		BackingStore:         util.KubeObject(bundle.File_deploy_crds_noobaa_io_v1alpha1_backingstore_cr_yaml).(*nbv1.BackingStore),
+		NooBaa:               util.KubeObject(bundle.File_deploy_crds_noobaa_io_v1alpha1_noobaa_cr_yaml).(*nbv1.NooBaa),
+		Secret:               util.KubeObject(bundle.File_deploy_internal_secret_empty_yaml).(*corev1.Secret),
+		ServiceAccount:       util.KubeObject(bundle.File_deploy_service_account_yaml).(*corev1.ServiceAccount),
+		CoreAppConfig:        util.KubeObject(bundle.File_deploy_internal_configmap_empty_yaml).(*corev1.ConfigMap),
+		PodAgentTemplate:     util.KubeObject(bundle.File_deploy_internal_pod_agent_yaml).(*corev1.Pod),
+		PvcAgentTemplate:     util.KubeObject(bundle.File_deploy_internal_pvc_agent_yaml).(*corev1.PersistentVolumeClaim),
+		TmfsPvcAgentTemplate: util.KubeObject(bundle.File_deploy_internal_pvc_tmfsdb_yaml).(*corev1.PersistentVolumeClaim),
 	}
 
 	// Set Namespace
@@ -238,7 +239,6 @@ func (r *Reconciler) completeReconcile(err error) (reconcile.Result, error) {
 
 // ReconcilePhases runs the reconcile flow and populates System.Status.
 func (r *Reconciler) ReconcilePhases() error {
-
 	if err := r.ReconcilePhaseVerifying(); err != nil {
 		return err
 	}
@@ -328,7 +328,6 @@ func (r *Reconciler) LoadBackingStoreSecret() error {
 
 // SetPhase updates the status phase and conditions
 func (r *Reconciler) SetPhase(phase nbv1.BackingStorePhase, reason string, message string) {
-
 	c := &r.BackingStore.Status.Conditions
 
 	if phase == "" {
@@ -362,7 +361,6 @@ func (r *Reconciler) UpdateStatus() error {
 
 // ReconcilePhaseVerifying checks that we have the system and secret needed to reconcile
 func (r *Reconciler) ReconcilePhaseVerifying() error {
-
 	r.SetPhase(
 		nbv1.BackingStorePhaseVerifying,
 		"BackingStorePhaseVerifying",
@@ -392,7 +390,6 @@ func (r *Reconciler) ReconcilePhaseVerifying() error {
 
 // ReconcilePhaseConnecting checks that we have the system and secret needed to reconcile
 func (r *Reconciler) ReconcilePhaseConnecting() error {
-
 	r.SetPhase(
 		nbv1.BackingStorePhaseConnecting,
 		"BackingStorePhaseConnecting",
@@ -408,7 +405,6 @@ func (r *Reconciler) ReconcilePhaseConnecting() error {
 
 // ReconcilePhaseCreating checks that we have the system and secret needed to reconcile
 func (r *Reconciler) ReconcilePhaseCreating() error {
-
 	r.SetPhase(
 		nbv1.BackingStorePhaseCreating,
 		"BackingStorePhaseCreating",
@@ -428,7 +424,6 @@ func (r *Reconciler) ReconcilePhaseCreating() error {
 // finalizeCore runs when the backing store is being deleted
 // Handles NooBaa core side of the store deletion
 func (r *Reconciler) finalizeCore() error {
-
 	if err := r.ReadSystemInfo(); err != nil && !util.IsPersistentError(err) {
 		return err
 	}
@@ -491,7 +486,6 @@ func (r *Reconciler) finalizeCore() error {
 
 // ReconcileDeletion handles the deletion of a backing-store using the noobaa api
 func (r *Reconciler) ReconcileDeletion(systemFound bool) error {
-
 	// Set the phase to let users know the operator has noticed the deletion request
 	if r.BackingStore.Status.Phase != nbv1.BackingStorePhaseDeleting {
 		r.SetPhase(
@@ -536,7 +530,6 @@ func (r *Reconciler) FinalizeDeletion() error {
 // ReadSystemInfo loads the information from the noobaa system api,
 // and prepares the structures to reconcile
 func (r *Reconciler) ReadSystemInfo() error {
-
 	sysClient, err := system.Connect(false)
 	if err != nil {
 		return err
@@ -678,7 +671,6 @@ func (r *Reconciler) ReadSystemInfo() error {
 // MakeExternalConnectionParams translates the backing store spec and secret,
 // to noobaa api structures to be used for creating/updating external connection and pool
 func (r *Reconciler) MakeExternalConnectionParams() (*nb.AddExternalConnectionParams, error) {
-
 	conn := &nb.AddExternalConnectionParams{
 		Name: r.BackingStore.Name,
 	}
@@ -867,7 +859,6 @@ func (r *Reconciler) fixAlternateKeysNames() {
 
 // ReconcileExternalConnection handles the external connection using noobaa api
 func (r *Reconciler) ReconcileExternalConnection() error {
-
 	if r.ExternalConnectionInfo != nil {
 		return nil
 	}
@@ -960,7 +951,6 @@ func (r *Reconciler) CheckExternalConnection(connInfo *nb.CheckExternalConnectio
 
 // ReconcilePool handles the pool using noobaa api
 func (r *Reconciler) ReconcilePool() error {
-
 	if !util.KubeCheck(r.CoreAppConfig) {
 		r.Logger.Warnf("Could not find NooBaa config map")
 	}
@@ -1045,6 +1035,7 @@ func (r *Reconciler) ReconcilePool() error {
 }
 
 func (r *Reconciler) reconcilePvPool() error {
+	println("[FAB] Start of reconcilePvPool")
 	if r.Secret.StringData == nil {
 		return fmt.Errorf("reconcilePvPool: r.Secret.StringData is not initialized yet")
 	}
@@ -1062,6 +1053,7 @@ func (r *Reconciler) reconcilePvPool() error {
 	pvcsList := &corev1.PersistentVolumeClaimList{}
 	util.KubeList(podsList, client.InNamespace(options.Namespace), client.MatchingLabels{"pool": r.BackingStore.Name})
 	util.KubeList(pvcsList, client.InNamespace(options.Namespace), client.MatchingLabels{"pool": r.BackingStore.Name})
+
 	if len(pvcsList.Items) < r.BackingStore.Spec.PVPool.NumVolumes {
 		err := r.reconcileMissingPvcs(pvcsList)
 		if err != nil {
@@ -1069,35 +1061,73 @@ func (r *Reconciler) reconcilePvPool() error {
 		}
 		util.KubeList(pvcsList, client.InNamespace(options.Namespace), client.MatchingLabels{"pool": r.BackingStore.Name})
 	}
-	if len(podsList.Items) < len(pvcsList.Items) {
-		err := r.reconcileMissingPods(podsList, pvcsList)
+
+	tmfspvclist := &corev1.PersistentVolumeClaimList{}
+
+	// fmt.Printf("[FAB]: reconcilePvPool - BLOCK_STORE_FS_TMFS_ENABLED=%s\n", os.Getenv("BLOCK_STORE_FS_TMFS_ENABLED"))
+	// os.Setenv("BLOCK_STORE_FS_TMFS_ENABLED", "true")
+	// println("[FAB]: reconcilePvPool - BLOCK_STORE_FS_TMFS_ENABLED forced to true in case it was not...")
+
+	if os.Getenv("BLOCK_STORE_FS_TMFS_ENABLED") != "true" {
+		os.Setenv("BLOCK_STORE_FS_TMFS_ENABLED", "true")
+		println("[FAB]: WARNING - BLOCK_STORE_FS_TMFS_ENABLED was not set. Forcing it to true...")
+	}
+
+	if os.Getenv("BLOCK_STORE_FS_TMFS_ENABLED") == "true" {
+		println("[UTK]: reconcilePvPool - Trying TMFS 1")
+		util.KubeList(tmfspvclist, client.InNamespace(options.Namespace), client.MatchingLabels{"tmfs_pool": r.BackingStore.Name})
+		println("[UTK]: reconcilePvPool - Trying TMFS 2", len(tmfspvclist.Items))
+		if len(tmfspvclist.Items) < r.BackingStore.Spec.PVPool.NumVolumes {
+			println("[UTK]: reconcilePvPool - Trying TMFS 3")
+			err := r.reconcileMissingTmfsPvcs(pvcsList, tmfspvclist)
+			if err != nil {
+				println("[UTK]: reconcilePvPool - Trying TMFS error")
+				return err
+			}
+			util.KubeList(tmfspvclist, client.InNamespace(options.Namespace), client.MatchingLabels{"tmfs_pool": r.BackingStore.Name})
+		}
+	}
+	if len(podsList.Items) < len(pvcsList.Items) || len(podsList.Items) < len(tmfspvclist.Items) {
+		println("[UTK]: reconcilePvPool - Reconciling pods")
+		err := r.reconcileMissingPods(podsList, pvcsList, tmfspvclist)
 		if err != nil {
 			return err
 		}
 	}
+
 	return r.reconcileExistingPods(podsList)
 }
 
-func (r *Reconciler) reconcileMissingPods(podsList *corev1.PodList, pvcsList *corev1.PersistentVolumeClaimList) error {
+func (r *Reconciler) reconcileMissingPods(podsList *corev1.PodList, pvcsList, tmfsPvcList *corev1.PersistentVolumeClaimList) error {
 	claimNames := []string{}
 	for _, pod := range podsList.Items {
-		claimNames = append(claimNames, pod.Spec.Volumes[1].PersistentVolumeClaim.ClaimName)
+		claimNames = append(
+			claimNames,
+			pod.Spec.Volumes[1].PersistentVolumeClaim.ClaimName,
+			pod.Spec.Volumes[2].PersistentVolumeClaim.ClaimName,
+		)
 	}
 	if err := r.updatePodTemplate(); err != nil {
 		return err
 	}
-	for _, pvc := range pvcsList.Items {
+	for idx, pvc := range pvcsList.Items {
+		println("[UTK]: reconcileMissingPods - PVC 1")
 		if !util.Contains(claimNames, pvc.Name) {
+			println("[UTK]: reconcileMissingPods - PVC 2")
 			i := strings.LastIndex(pvc.Name, "-")
 			postfix := pvc.Name[i+1:]
 			newPod := r.PodAgentTemplate.DeepCopy()
 			newPod.Name = fmt.Sprintf("%s-%s-pod-%s", r.BackingStore.Name, options.SystemName, postfix)
 			newPod.Namespace = options.Namespace
 			newPod.Spec.Volumes[1].PersistentVolumeClaim.ClaimName = pvc.Name
+			if tmfsPvcList != nil {
+				newPod.Spec.Volumes[2].PersistentVolumeClaim.ClaimName = tmfsPvcList.Items[idx].Name
+			}
 			r.Own(newPod)
 			util.KubeCreateSkipExisting(newPod)
 		}
 	}
+
 	return nil
 }
 
@@ -1159,7 +1189,7 @@ func (r *Reconciler) needUpdateResources(c *corev1.Container) bool {
 }
 
 func (r *Reconciler) needUpdate(pod *corev1.Pod) bool {
-	var c = &pod.Spec.Containers[0]
+	c := &pod.Spec.Containers[0]
 	for _, name := range []string{"HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY"} {
 		envVar := util.GetEnvVariable(&c.Env, name)
 		val, ok := os.LookupEnv(name)
@@ -1264,6 +1294,24 @@ func (r *Reconciler) reconcileMissingPvcs(pvcsList *corev1.PersistentVolumeClaim
 	return nil
 }
 
+func (r *Reconciler) reconcileMissingTmfsPvcs(pvcsList, tmfsPvcsList *corev1.PersistentVolumeClaimList) error {
+	r.updateTmfsPvcTemplate()
+	for i := len(tmfsPvcsList.Items); i < r.BackingStore.Spec.PVPool.NumVolumes; i++ {
+		pvc := pvcsList.Items[i]
+		j := strings.LastIndex(pvc.Name, "-")
+		postfix := pvc.Name[j+1:]
+		pvcName := fmt.Sprintf("%s-%s-pvc-%s", r.BackingStore.Name, "tmfsdb", postfix)
+		newPvc := r.TmfsPvcAgentTemplate.DeepCopy()
+		newPvc.Name = pvcName
+		newPvc.Namespace = options.Namespace
+		r.Own(newPvc)
+		println("[UTK]: reconcileMissingTmfs - Trying to create PVC", i)
+		util.KubeCreateSkipExisting(newPvc)
+		println("[UTK]: reconcileMissingTmfs - Created PVC", i)
+	}
+	return nil
+}
+
 func (r *Reconciler) isPodinNoobaa(pod *corev1.Pod) bool {
 	for _, host := range *r.HostsInfo {
 		if strings.HasPrefix(host.Name, pod.Name) {
@@ -1299,11 +1347,9 @@ func (r *Reconciler) updatePodTemplate() error {
 
 	c.Image = r.NooBaa.Status.ActualImage
 	if r.NooBaa.Spec.ImagePullSecret == nil {
-		r.PodAgentTemplate.Spec.ImagePullSecrets =
-			[]corev1.LocalObjectReference{}
+		r.PodAgentTemplate.Spec.ImagePullSecrets = []corev1.LocalObjectReference{}
 	} else {
-		r.PodAgentTemplate.Spec.ImagePullSecrets =
-			[]corev1.LocalObjectReference{*r.NooBaa.Spec.ImagePullSecret}
+		r.PodAgentTemplate.Spec.ImagePullSecrets = []corev1.LocalObjectReference{*r.NooBaa.Spec.ImagePullSecret}
 	}
 	r.PodAgentTemplate.Labels = map[string]string{
 		"app":          "noobaa",
@@ -1378,6 +1424,24 @@ func (r *Reconciler) updatePvcTemplate() {
 	r.PvcAgentTemplate.Labels = map[string]string{
 		"app":  "noobaa",
 		"pool": r.BackingStore.Name,
+	}
+}
+
+func (r *Reconciler) updateTmfsPvcTemplate() {
+	if r.BackingStore.Spec.PVPool.StorageClass != "" {
+		r.TmfsPvcAgentTemplate.Spec.StorageClassName = &r.BackingStore.Spec.PVPool.StorageClass
+	} else if r.NooBaa.Spec.PVPoolDefaultStorageClass != nil {
+		r.TmfsPvcAgentTemplate.Spec.StorageClassName = r.NooBaa.Spec.PVPoolDefaultStorageClass
+	}
+
+	r.TmfsPvcAgentTemplate.Spec.Resources = corev1.VolumeResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceStorage: *resource.NewScaledQuantity(int64(100), resource.Mega),
+		},
+	}
+	r.TmfsPvcAgentTemplate.Labels = map[string]string{
+		"app":       "noobaa",
+		"tmfs_pool": r.BackingStore.Name,
 	}
 }
 

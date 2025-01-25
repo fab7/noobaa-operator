@@ -1035,7 +1035,6 @@ func (r *Reconciler) ReconcilePool() error {
 }
 
 func (r *Reconciler) reconcilePvPool() error {
-	println("[FAB] Start of reconcilePvPool")
 	if r.Secret.StringData == nil {
 		return fmt.Errorf("reconcilePvPool: r.Secret.StringData is not initialized yet")
 	}
@@ -1064,37 +1063,32 @@ func (r *Reconciler) reconcilePvPool() error {
 
 	tmfspvclist := &corev1.PersistentVolumeClaimList{}
 
-	// fmt.Printf("[FAB]: reconcilePvPool - BLOCK_STORE_FS_TMFS_ENABLED=%s\n", os.Getenv("BLOCK_STORE_FS_TMFS_ENABLED"))
-	// os.Setenv("BLOCK_STORE_FS_TMFS_ENABLED", "true")
-	// println("[FAB]: reconcilePvPool - BLOCK_STORE_FS_TMFS_ENABLED forced to true in case it was not...")
-
 	if os.Getenv("BLOCK_STORE_FS_TMFS_ENABLED") != "true" {
 		os.Setenv("BLOCK_STORE_FS_TMFS_ENABLED", "true")
 		println("[FAB]: WARNING - BLOCK_STORE_FS_TMFS_ENABLED was not set. Forcing it to true...")
 	}
 
 	if os.Getenv("BLOCK_STORE_FS_TMFS_ENABLED") == "true" {
-		println("[UTK]: reconcilePvPool - Trying TMFS 1")
+		// println("[UTK]: reconcilePvPool - Trying TMFS 1")
 		util.KubeList(tmfspvclist, client.InNamespace(options.Namespace), client.MatchingLabels{"tmfs_pool": r.BackingStore.Name})
-		println("[UTK]: reconcilePvPool - Trying TMFS 2", len(tmfspvclist.Items))
+		// println("[UTK]: reconcilePvPool - Trying TMFS 2", len(tmfspvclist.Items))
 		if len(tmfspvclist.Items) < r.BackingStore.Spec.PVPool.NumVolumes {
-			println("[UTK]: reconcilePvPool - Trying TMFS 3")
+			// println("[UTK]: reconcilePvPool - Trying TMFS 3")
 			err := r.reconcileMissingTmfsPvcs(pvcsList, tmfspvclist)
 			if err != nil {
-				println("[UTK]: reconcilePvPool - Trying TMFS error")
+				// println("[UTK]: reconcilePvPool - Trying TMFS error")
 				return err
 			}
 			util.KubeList(tmfspvclist, client.InNamespace(options.Namespace), client.MatchingLabels{"tmfs_pool": r.BackingStore.Name})
 		}
 	}
 	if len(podsList.Items) < len(pvcsList.Items) || len(podsList.Items) < len(tmfspvclist.Items) {
-		println("[UTK]: reconcilePvPool - Reconciling pods")
+		// println("[UTK]: reconcilePvPool - Reconciling pods")
 		err := r.reconcileMissingPods(podsList, pvcsList, tmfspvclist)
 		if err != nil {
 			return err
 		}
 	}
-
 	return r.reconcileExistingPods(podsList)
 }
 
@@ -1111,9 +1105,9 @@ func (r *Reconciler) reconcileMissingPods(podsList *corev1.PodList, pvcsList, tm
 		return err
 	}
 	for idx, pvc := range pvcsList.Items {
-		println("[UTK]: reconcileMissingPods - PVC 1")
+		// println("[UTK]: reconcileMissingPods - PVC 1")
 		if !util.Contains(claimNames, pvc.Name) {
-			println("[UTK]: reconcileMissingPods - PVC 2")
+			// println("[UTK]: reconcileMissingPods - PVC 2")
 			i := strings.LastIndex(pvc.Name, "-")
 			postfix := pvc.Name[i+1:]
 			newPod := r.PodAgentTemplate.DeepCopy()
@@ -1305,9 +1299,9 @@ func (r *Reconciler) reconcileMissingTmfsPvcs(pvcsList, tmfsPvcsList *corev1.Per
 		newPvc.Name = pvcName
 		newPvc.Namespace = options.Namespace
 		r.Own(newPvc)
-		println("[UTK]: reconcileMissingTmfs - Trying to create PVC", i)
+		// println("[UTK]: reconcileMissingTmfs - Trying to create PVC", i)
 		util.KubeCreateSkipExisting(newPvc)
-		println("[UTK]: reconcileMissingTmfs - Created PVC", i)
+		// println("[UTK]: reconcileMissingTmfs - Created PVC", i)
 	}
 	return nil
 }

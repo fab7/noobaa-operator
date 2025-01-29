@@ -78,28 +78,16 @@ spec:
         - |
           echo "#-- Start of initContainer -------------------------------"
           echo
-          # [OBSOLETE] echo "#-- Create TMFS directories ------------------------------"
-          # [OBSOLETE] sudo mkdir -p /tmfs_db
-          # [OBSOLETE] sudo mkdir -p /tmfs_init_files
-          # [OBSOLETE] sudo mkdir -p /tmfs_logs
-          # [OBSOLETE] echo
-          # [OBSOLETE] echo "#-- Set 'noob' ownership to the TMFS directories ---------"
-          # [OBSOLETE] sudo chmod -R 770 /tmfs_db
-          # [OBSOLETE] sudo chgrp -R 0   /tmfs_db
-          # [OBSOLETE] sudo chown -R noob:root /tmfs_db
-          # [OBSOLETE] echo
-          # [OBSOLETE] echo "#-- Set the Setgid bit -----------------------------------"
-          # [OBSOLETE] chmod g+s /tmfs_db
-          # [OBSOLETE] chmod g+s /tmfs_logs
-          # [OBSOLETE] echo          
+          echo "#-- Create TMFS directories ------------------------------"
+          echo "#-- Modify ownership and permissions of the TMFS init file (used in bring-up)"
+          chown -R noob:root /tmfs_init_files
+          chmod +x /tmfs_init_files_/tmfs_init.sh
+          # [TODO-FIXME] Exec 'tmfs_init.sh'
+          echo
           echo "#-- End of initContainer ---------------------------------"
       volumeMounts:
-        # [OBSOLETE] - name: tmfs-db-vol
-        # [OBSOLETE]   mountPath: /tmfs_db
         - name: tmfs-init-vol
           mountPath: /tmfs_init_files
-        # [OBSOLETE] - name: tmfs-logs-vol
-        # [OBSOLETE]   mountPath: /tmfs_logs
 
   # -------------------------------------------------------------
   # -- MAIN-CONTAINER
@@ -132,10 +120,12 @@ spec:
       command: ["/bin/sh", "-c"]  # -----------------------------
       args: 
         - |
+          echo "#-- Run 'noobaa_init.sh' "
           /noobaa_init_files/noobaa_init.sh agent
           echo "#-- Make the TMFS init files writable during bring-up"
           cp /tmfs_init_files/tmfs_init.sh /tmp/tmfs_init.sh
           chmod +x /tmp/tmfs_init.sh
+          /tmp/tmfs_init.sh
       ports: # --------------------------------------------------
         # This should change according to the allocation from the NooBaa server
         - containerPort: 60101
@@ -159,11 +149,10 @@ spec:
           # [TO-TRY]   readOnly: false               # [20250110] is new
       securityContext: # ----------------------------------------
         allowPrivilegeEscalation: true    # was false
-        # runAsNonRoot: true              # [20250113] commented out
-        capabilities:                     # [20250113] is new
-          add:                            # [20250113] is new
-            - CAP_SYS_ADMIN               # [20250113] is new
-        privileged: true                  # [20250113] is new and true won't work
+        capabilities:                     # is new
+          add:                            # is new
+            - CAP_SYS_ADMIN               # is new
+        privileged: true                  # is new
   automountServiceAccountToken: false
   securityContext:
     runAsUser: 10001

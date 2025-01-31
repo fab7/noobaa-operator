@@ -145,13 +145,13 @@ func (r *Reconciler) ReconcilePhaseCreatingForMainClusters() error {
 
 	// create notification log pvc if bucket notifications is enabled and pvc was not set explicitly
 	if r.NooBaa.Spec.BucketNotifications.Enabled {
-			if err := r.ReconcileODFPersistentLoggingPVC(
-				"bucketNotifications.pvc",
-				"InvalidBucketNotificationConfiguration",
-				"Bucket notifications requires a Persistent Volume Claim (PVC) with ReadWriteMany (RWX) access mode. Please specify the 'bucketNotifications.pvc'.",
-				r.NooBaa.Spec.BucketNotifications.PVC,
-				r.BucketNotificationsPVC); err != nil {
-				return err
+		if err := r.ReconcileODFPersistentLoggingPVC(
+			"bucketNotifications.pvc",
+			"InvalidBucketNotificationConfiguration",
+			"Bucket notifications requires a Persistent Volume Claim (PVC) with ReadWriteMany (RWX) access mode. Please specify the 'bucketNotifications.pvc'.",
+			r.NooBaa.Spec.BucketNotifications.PVC,
+			r.BucketNotificationsPVC); err != nil {
+			return err
 		}
 	}
 
@@ -472,10 +472,10 @@ func (r *Reconciler) setDesiredCoreEnv(c *corev1.Container) {
 
 	if r.NooBaa.Spec.BucketNotifications.Enabled {
 		envVar := corev1.EnvVar{
-			Name: "NOTIFICATION_LOG_DIR",
+			Name:  "NOTIFICATION_LOG_DIR",
 			Value: "/var/logs/notifications",
 		}
-		util.MergeEnvArrays(&c.Env, &[]corev1.EnvVar{envVar});
+		util.MergeEnvArrays(&c.Env, &[]corev1.EnvVar{envVar})
 	}
 
 }
@@ -555,10 +555,10 @@ func (r *Reconciler) SetDesiredCoreApp() error {
 				}}
 				util.MergeVolumeMountList(&c.VolumeMounts, &notificationVolumeMounts)
 
-				notificationVolumes := []corev1.Volume {{
+				notificationVolumes := []corev1.Volume{{
 					Name: notificationsVolume,
-					VolumeSource: corev1.VolumeSource {
-						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource {
+					VolumeSource: corev1.VolumeSource{
+						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
 							ClaimName: r.BucketNotificationsPVC.Name,
 						},
 					},
@@ -1230,8 +1230,8 @@ func (r *Reconciler) ReconcileDBConfigMap(cm *corev1.ConfigMap, desiredFunc func
 	return r.isObjectUpdated(result), nil
 }
 
-//ReconcileODFPersistentLoggingPVC ensures a persistent logging pvc (either for bucket logging or bucket notificatoins)
-//is properly configured. If needed and possible, allocate one from CephFS
+// ReconcileODFPersistentLoggingPVC ensures a persistent logging pvc (either for bucket logging or bucket notificatoins)
+// is properly configured. If needed and possible, allocate one from CephFS
 func (r *Reconciler) ReconcileODFPersistentLoggingPVC(
 	fieldName string,
 	errorName string,
@@ -1243,7 +1243,7 @@ func (r *Reconciler) ReconcileODFPersistentLoggingPVC(
 
 	// Return if persistent logging PVC already exists
 	if pvcName != nil {
-		pvc.Name = *pvcName;
+		pvc.Name = *pvcName
 		log.Infof("PersistentLoggingPVC %s already exists and supports RWX access mode. Skipping ReconcileODFPersistentLoggingPVC.", *pvcName)
 		return nil
 	}
@@ -1257,7 +1257,7 @@ func (r *Reconciler) ReconcileODFPersistentLoggingPVC(
 	if !r.preparePersistentLoggingPVC(pvc, fieldName) {
 		return util.NewPersistentError(errorName, errorText)
 	}
-	r.Own(pvc);
+	r.Own(pvc)
 
 	log.Infof("Persistent logging PVC %s does not exist. Creating...", pvc.Name)
 	err := r.Client.Create(r.Ctx, pvc)
@@ -1269,7 +1269,7 @@ func (r *Reconciler) ReconcileODFPersistentLoggingPVC(
 
 }
 
-//prepare persistent logging pvc
+// prepare persistent logging pvc
 func (r *Reconciler) preparePersistentLoggingPVC(pvc *corev1.PersistentVolumeClaim, fieldName string) bool {
 	pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany}
 
@@ -1282,9 +1282,9 @@ func (r *Reconciler) preparePersistentLoggingPVC(pvc *corev1.PersistentVolumeCla
 	if util.KubeCheck(sc) {
 		r.Logger.Infof("%s not provided, defaulting to 'cephfs' storage class %s to create persistent logging pvc", fieldName, sc.Name)
 		pvc.Spec.StorageClassName = &sc.Name
-		return true;
+		return true
 	} else {
-		return false;
+		return false
 	}
 }
 
@@ -1329,7 +1329,7 @@ func (r *Reconciler) SetDesiredCoreAppConfig() error {
 	// When adding a new env var, make sure to add it to the sts/deployment as well
 	// see "NOOBAA_DISABLE_COMPRESSION" as an example
 	DefaultConfigMapData := map[string]string{
-		"NOOBAA_DISABLE_COMPRESSION": "false",
+		"NOOBAA_DISABLE_COMPRESSION": "true", // [FAB-20250131: was false]
 		"DISABLE_DEV_RANDOM_SEED":    "true",
 		"NOOBAA_LOG_LEVEL":           "default_level",
 		"NOOBAA_LOG_COLOR":           "true",

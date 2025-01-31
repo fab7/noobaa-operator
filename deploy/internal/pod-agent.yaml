@@ -64,30 +64,30 @@ spec:
   # -------------------------------------------------------------
   # -- INIT-CONTAINER
   # -------------------------------------------------------------
-  initContainers:
-    - name: tmfs-agent-init
-      image: quay.io/fab/alpine-kubectl:1.30  # A lightweight image (71.6MB)
-      imagePullPolicy: IfNotPresent  # Always
-      # securityContext:
-      #   privileged: true
-      #   capabilities:
-      #    add:
-      #       - SYS_ADMIN
-      command: ['/bin/sh', '-c']
-      args:
-        - |
-          echo "#-- Start of initContainer -------------------------------"
-          echo
-          echo "#-- Create TMFS directories ------------------------------"
-          echo "#-- Modify ownership and permissions of the TMFS init file (used in bring-up)"
-          chown -R noob:root /tmfs_init_files
-          chmod +x /tmfs_init_files_/tmfs_init.sh
-          # [TODO-FIXME] Exec 'tmfs_init.sh'
-          echo
-          echo "#-- End of initContainer ---------------------------------"
-      volumeMounts:
-        - name: tmfs-init-vol
-          mountPath: /tmfs_init_files
+  # initContainers:
+  #   - name: tmfs-agent-init
+  #     image: quay.io/fab/alpine-kubectl:1.30  # A lightweight image (71.6MB)
+  #     imagePullPolicy: IfNotPresent  # Always
+  #     # securityContext:
+  #     #   privileged: true
+  #     #   capabilities:
+  #     #    add:
+  #     #       - SYS_ADMIN
+  #     command: ['/bin/sh', '-c']
+  #     args:
+  #       - |
+  #         echo "#-- Start of initContainer -------------------------------"
+  #         echo
+  #         # [OBSOLETE] echo "#-- Create TMFS directories ------------------------------"
+  #         # [OBSOLETE] echo "#-- Modify ownership and permissions of the TMFS init file (used in bring-up)"
+  #         # [OBSOLETE] chown -R noob:root /tmfs_init_files
+  #         # [OBSOLETE]  chmod +x /tmfs_init_files_/tmfs_init.sh
+  #         # [TODO-FIXME] Exec 'tmfs_init.sh'
+  #         echo
+  #         echo "#-- End of initContainer ---------------------------------"
+  #     volumeMounts:
+  #       - name: tmfs-config-vol
+  #         mountPath: /tmfs_config
 
   # -------------------------------------------------------------
   # -- MAIN-CONTAINER
@@ -111,7 +111,10 @@ spec:
         - name: AGENT_CONFIG
         - name: NOOBAA_LOG_LEVEL
         - name: NOOBAA_LOG_COLOR
-        # Add Ceph admin keyring
+        # TMFS-related variables
+        - name: BLOCK_STORE_FS_TMFS_ENABLED
+          value: "true"
+        # Ceph admin keyring
         - name: CEPH_ADMIN_KEY
           valueFrom:
             secretKeyRef:
@@ -120,12 +123,21 @@ spec:
       command: ["/bin/sh", "-c"]  # -----------------------------
       args: 
         - |
-          echo "#-- Run 'noobaa_init.sh' "
-          /noobaa_init_files/noobaa_init.sh agent
-          echo "#-- Make the TMFS init files writable during bring-up"
-          cp /tmfs_init_files/tmfs_init.sh /tmp/tmfs_init.sh
-          chmod +x /tmp/tmfs_init.sh
-          /tmp/tmfs_init.sh
+          touch /tmfs_init_files/tmfs_test_init.sh
+          echo "#!/bin/sh"                                                 >> /tmfs_init_files/tmfs_test_init.sh
+          echo "echo #---------------------------------------------------" >> /tmfs_init_files/tmfs_test_init.sh
+          echo "echo #-- Hello from /tmfs_init_files/tmfs_test_init.sh --" >> /tmfs_init_files/tmfs_test_init.sh
+          echo "echo #---------------------------------------------------" >> /tmfs_init_files/tmfs_test_init.sh
+          chmod +x /tmfs_init_files/tmfs_test_init.sh
+          /tmfs_init_files/tmfs_test_init.sh
+          echo
+          echo "#-- Make the TMFS init files writable during bring-up -----------------"
+          cp /tmfs_init_files/tmfs_config/tmfs_init.sh /tmfs_init_files/tmfs_init.sh
+          chmod +x /tmfs_init_files/tmfs_init.sh
+          echo
+          echo "#-- Run 'noobaa_init.sh' in 'tmfs-agent' mode -------------------------"
+          /noobaa_init_files/noobaa_init.sh tmfs-agent
+          echo
       ports: # --------------------------------------------------
         # This should change according to the allocation from the NooBaa server
         - containerPort: 60101
@@ -138,15 +150,19 @@ spec:
         # TMFS-related volumes
         - name: tmfsdbstorage
           mountPath: /tmfs_db
-        - name: tmfs-init-vol
-          mountPath: /tmfs_init_files
         - name: tmfs-logs-vol
           mountPath: /tmfs_logs
+        - name: tmfs-init-vol
+          mountPath: /tmfs_init_files
+        - name: tmfs-config-vol
+          mountPath: /tmfs_init_files/tmfs_config
+
           # [TO-TRY] Explicitly add and mount host devices to the container
           # [TO-TRY]  (because the container is neither running in privilege mode nor as root)
           # [TO-TRY] - name: dev                     # [20250110] is new
           # [TO-TRY]   mountPath: /dev               # [20250110] is new
           # [TO-TRY]   readOnly: false               # [20250110] is new
+
       securityContext: # ----------------------------------------
         allowPrivilegeEscalation: true    # was false
         capabilities:                     # is new
@@ -173,11 +189,14 @@ spec:
     - name: tmfsdbstorage
       persistentVolumeClaim:
         claimName: tmfsdb-pv-claim
-    - name: tmfs-init-vol
-      configMap:
-        name: tmfs-init
     - name: tmfs-logs-vol
       emptyDir: {}
+    - name: tmfs-init-vol
+      emptyDir: {}
+    - name: tmfs-config-vol
+      configMap:
+        name: tmfs-config
+
 
     # [TO-TRY] - name: dev
     # [TO-TRY]   hostPath:

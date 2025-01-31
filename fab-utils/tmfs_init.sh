@@ -76,6 +76,29 @@ if [ ${VERBOSE} -eq 1 ]; then
     echo
 fi 
 
+echo "#-- Re-Scanning the SCSI Bus -----------------------------"
+#-- This operation might be required if you changed any HW config
+SCSI_HOSTS=($(ls /sys/class/scsi_host))
+if [[ ! ${SCSI_HOSTS[0]} =~ "host" ]]; then
+    echo "[WARNING-ERROR] No SCSI host adapter found!"
+    exit 1
+elif [ ${VERBOSE} -eq 1 ]; then
+    echo "[INFO] Found ${#SCSI_HOSTS[@]} SCSI host adapter ports"
+fi
+#-- WARNING: This operation should be performed on the Host (Safer)
+sudo mount -o remount,rw /sys
+for host in "${SCSI_HOSTS[@]}"; do
+    echo "- - -" | sudo tee /sys/class/scsi_host/${host}/scan 2>&1 > /dev/null
+    if [ $? -ne 0 ]; then
+        echo "[ERROR] Failed to re-scan SCSI host adapter port: ${host}"
+        exit 1
+    elif [ ${VERBOSE} -eq 1 ]; then
+        echo "[INFO] Re-scanned SCSI host adapter port: ${host}"
+    fi
+done
+sudo mount -o remount,ro /sys 
+# echo
+
 echo "#-- Retrieve MEDIUM CHARGER ------------------------------"
 #-- Retrieve the 1st generic SCSI device file corresponding to an IBM Medium Changer"
 DEVICE="mediumx"; VENDOR="IBM"; PRODUCT="03584L32"
@@ -103,8 +126,8 @@ elif [ ${VERBOSE} -eq 1 ]; then
     echo
 fi
 
-echo "#-- Clear existing SCSI reservations ---------------------"
-for TAPE_DRIVE in "${TAPE_DRIVES[@]}"; do
+echo "#-- Clear existing SCSI reservations in the 1st drive ----"
+for TAPE_DRIVE in "${TAPE_DRIVES[0]}"; do
     # Read Existing Reservation
     RES=$(sudo sg_persist --in --read-reservation ${TAPE_DRIVE})
     if [ $? -ne 0 ]; then
@@ -177,9 +200,7 @@ else
         echo "#-- Starting TMFS ----------------------------------------"
         # Unmounting ${TMFS_DATA_DIR}
         if mountpoint -q ${TMFS_DATA_DIR}; then
-            if sudo umount ${TMFS_DATA_DIR}; then
-                echo "[INFO] '${TMFS_DATA_DIR}' successfully unmounted"
-            else
+            if ! sudo umount ${TMFS_DATA_DIR}; then
                 echo "[ERROR] Failed to unmount '${TMFS_DATA_DIR}'..."
                 exit 1
             fi
@@ -198,6 +219,7 @@ else
                 -o mountoptions="${MOUNT_OPTIONS}" -o changer_devname="${CHANGER}" \
                 -o mig_wait_sec=0 ${TMFS_DATA_DIR}  > "${TMFS_LOG_DIR}/tmfs.log" 2>&1
         fi
+        echo "[INFO] 'TMFS successfully started"
     else
         echo "[WARNING] Skipping TMFS launch for the time being..."
         echo

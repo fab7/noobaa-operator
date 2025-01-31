@@ -1064,7 +1064,7 @@ func (r *Reconciler) reconcilePvPool() error {
 	tmfspvclist := &corev1.PersistentVolumeClaimList{}
 
 	if os.Getenv("BLOCK_STORE_FS_TMFS_ENABLED") != "true" {
-		os.Setenv("BLOCK_STORE_FS_TMFS_ENABLED", "true")
+		// [OBSOLETE-20250131] os.Setenv("BLOCK_STORE_FS_TMFS_ENABLED", "true")
 		println("[FAB]: WARNING - BLOCK_STORE_FS_TMFS_ENABLED was not set. Forcing it to true...")
 	}
 

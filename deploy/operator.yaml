@@ -65,6 +65,9 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            # TMFS-related variables
+            - name: BLOCK_STORE_FS_TMFS_ENABLED
+              value: "true"
         # SHOULD BE RETURNED ONCE COSI IS BACK
         # - name: objectstorage-provisioner-sidecar
         #   image: COSI_SIDECAR_IMAGE

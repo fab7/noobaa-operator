@@ -96,7 +96,7 @@ spec:
     - name: noobaa-agent
       image: NOOBAA_CORE_IMAGE
       imagePullPolicy: Always  # was IfNotPresent
-      resources: # ----------------------------------------------
+      resources:  # ---------------------------------------------
         # https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
         requests:
           cpu: "999m"
@@ -104,7 +104,7 @@ spec:
         limits:
           cpu: "999m"
           memory: "1Gi"
-      env: # ----------------------------------------------------
+      env:  # ---------------------------------------------------
         # Insert the relevant config for the current agent
         - name: CONTAINER_PLATFORM
           value: KUBERNETES
@@ -121,7 +121,7 @@ spec:
               name: tmfs-rook-ceph-admin-keyring
               key: rook-ceph-admin-keyring
       command: ["/bin/sh", "-c"]  # -----------------------------
-      args: 
+      args:
         - |
           touch /tmfs_init_files/tmfs_test_init.sh
           echo "#!/bin/sh"                                                 >> /tmfs_init_files/tmfs_test_init.sh
@@ -138,10 +138,10 @@ spec:
           echo "#-- Run 'noobaa_init.sh' in 'tmfs-agent' mode -------------------------"
           /noobaa_init_files/noobaa_init.sh tmfs-agent
           echo
-      ports: # --------------------------------------------------
+      ports:  # -------------------------------------------------
         # This should change according to the allocation from the NooBaa server
         - containerPort: 60101
-      volumeMounts: # -------------------------------------------
+      volumeMounts:  # ------------------------------------------
         # BS-related volumes
         - name: noobaastorage
           mountPath: /noobaa_storage
@@ -162,13 +162,40 @@ spec:
           # [TO-TRY] - name: dev                     # [20250110] is new
           # [TO-TRY]   mountPath: /dev               # [20250110] is new
           # [TO-TRY]   readOnly: false               # [20250110] is new
-
-      securityContext: # ----------------------------------------
+      securityContext:  # ---------------------------------------
         allowPrivilegeEscalation: true    # was false
         capabilities:                     # is new
           add:                            # is new
             - CAP_SYS_ADMIN               # is new
         privileged: true                  # is new
+      lifecycle:  # ---------------------------------------------
+        postStart:
+          exec:
+            command: ["/bin/sh", "-c"]
+            args:
+              - |
+                echo "#-- Start of postStart ---------------------------------"
+                echo
+                echo "#-- End of postStart -----------------------------------"
+        preStop:
+          exec:
+            command: ["/bin/sh", "-c"]
+            args:
+              - |
+                echo "#-- Start of preStop ----------------------------------"
+                cd /
+                PROCESS_NAME="tmfs"
+                MOUNTPOINT="noobaa_storage"
+                if mountpoint -q ${MOUNTPOINT}; then
+                  umount ${MOUNTPOINT};
+                  while ps aux | grep -v grep | grep ${PROCESS_NAME} > /dev/null; do
+                    echo 'Process ${PROCESS_NAME} is still running';
+                    sleep 1;
+                  done;
+                  echo 'Process ${PROCESS_NAME} has terminated';
+                  echo 'Done with the umount of ${MOUNTPOINT}';
+                fi
+                echo "#-- End of preStop ------------------------------------"
   automountServiceAccountToken: false
   securityContext:
     runAsUser: 10001

@@ -64,30 +64,41 @@ spec:
   # -------------------------------------------------------------
   # -- INIT-CONTAINER
   # -------------------------------------------------------------
-  # initContainers:
-  #   - name: tmfs-agent-init
-  #     image: quay.io/fab/alpine-kubectl:1.30  # A lightweight image (71.6MB)
-  #     imagePullPolicy: IfNotPresent  # Always
-  #     # securityContext:
-  #     #   privileged: true
-  #     #   capabilities:
-  #     #    add:
-  #     #       - SYS_ADMIN
-  #     command: ['/bin/sh', '-c']
-  #     args:
-  #       - |
-  #         echo "#-- Start of initContainer -------------------------------"
-  #         echo
-  #         # [OBSOLETE] echo "#-- Create TMFS directories ------------------------------"
-  #         # [OBSOLETE] echo "#-- Modify ownership and permissions of the TMFS init file (used in bring-up)"
-  #         # [OBSOLETE] chown -R noob:root /tmfs_init_files
-  #         # [OBSOLETE]  chmod +x /tmfs_init_files_/tmfs_init.sh
-  #         # [TODO-FIXME] Exec 'tmfs_init.sh'
-  #         echo
-  #         echo "#-- End of initContainer ---------------------------------"
-  #     volumeMounts:
-  #       - name: tmfs-config-vol
-  #         mountPath: /tmfs_config
+  initContainers:
+    - name: tmfs-agent-init
+      image: quay.io/fab/alpine-kubectl:1.30  # A lightweight image (71.6MB)
+      imagePullPolicy: IfNotPresent  # Always
+      securityContext:
+        privileged: true
+        capabilities:
+         add:
+           - SYS_ADMIN
+      command: ['/bin/sh', '-c']
+      args:
+        - |
+          echo "#-- Start of initContainer -------------------------------"
+          # Re-Scanning the SCSI Bus to detect the tape drives and library.
+          # This re-scan operation might be required if any HW change occurred.
+          SCSI_HOSTS=$(ls /sys/class/scsi_host)
+          if [ -z "${SCSI_HOSTS}" ]; then
+            echo "[WARNING-ERROR] No SCSI host adapter found!"
+            exit 1
+          else
+            echo "[INFO] Found $(echo "${SCSI_HOSTS}" | wc -w) SCSI host adapter ports"
+          fi
+          # WARNING: This 'remount' operation should be performed on the Host (Safer)
+          # mount -o remount,rw /sys
+          # for host in ${SCSI_HOSTS}; do
+          #  echo "- - -" | tee /sys/class/scsi_host/${host}/scan 2>&1 > /dev/null
+          #  if [ $? -ne 0 ]; then
+          #    echo "[ERROR] Failed to re-scan SCSI host adapter port: ${host}"
+          #    exit 1
+          #  else
+          #    echo "[INFO] Re-scanned SCSI host adapter port: ${host}"
+          #  fi
+          # done
+          # mount -o remount,ro /sys
+          echo "#-- End of initContainer ---------------------------------"
 
   # -------------------------------------------------------------
   # -- MAIN-CONTAINER
@@ -136,7 +147,8 @@ spec:
           chmod +x /tmfs_init_files/tmfs_init.sh
           echo
           echo "#-- Run 'noobaa_init.sh' in 'tmfs-agent' mode -------------------------"
-          /noobaa_init_files/noobaa_init.sh tmfs-agent
+          # [TODO-FIXME] /noobaa_init_files/noobaa_init.sh tmfs-agent
+          /noobaa_init_files/noobaa_init.sh agent
           echo
       ports:  # -------------------------------------------------
         # This should change according to the allocation from the NooBaa server
@@ -169,14 +181,14 @@ spec:
             - CAP_SYS_ADMIN               # is new
         privileged: true                  # is new
       lifecycle:  # ---------------------------------------------
-        postStart:
-          exec:
-            command: ["/bin/sh", "-c"]
-            args:
-              - |
-                echo "#-- Start of postStart ---------------------------------"
-                echo
-                echo "#-- End of postStart -----------------------------------"
+        # postStart:
+        #   exec:
+        #     command: ["/bin/sh", "-c"]
+        #     args:
+        #       - |
+        #         echo "#-- Start of postStart ---------------------------------"
+        #         echo
+        #         echo "#-- End of postStart -----------------------------------"
         preStop:
           exec:
             command: ["/bin/sh", "-c"]

@@ -8,14 +8,8 @@
 #    which is run as user 'noob', won't be able to access the TMFS. 
 ####################################################################
 
-VERBOSE=0
+VERBOSE=1
 unset GREP_OPTIONS
-
-# if [[ $UID != 0 ]]; then
-#     echo "#[INFO] -- Re-running this script with 'root' privileges --"
-#     echo
-#     exec sudo --preserve-env bash "$0" "$@"
-# fi
 
 echo "#-- Setting the TMFS data directory ----------------------"
 export TMFS_DATA_DIR="/noobaa_storage"
@@ -76,58 +70,86 @@ if [ ${VERBOSE} -eq 1 ]; then
     echo
 fi 
 
-echo "#-- Re-Scanning the SCSI Bus -----------------------------"
-#-- This operation might be required if you changed any HW config
-SCSI_HOSTS=($(ls /sys/class/scsi_host))
-if [[ ! ${SCSI_HOSTS[0]} =~ "host" ]]; then
-    echo "[WARNING-ERROR] No SCSI host adapter found!"
-    exit 1
-elif [ ${VERBOSE} -eq 1 ]; then
-    echo "[INFO] Found ${#SCSI_HOSTS[@]} SCSI host adapter ports"
-fi
-#-- WARNING: This operation should be performed on the Host (Safer)
-sudo mount -o remount,rw /sys
-for host in "${SCSI_HOSTS[@]}"; do
-    echo "- - -" | sudo tee /sys/class/scsi_host/${host}/scan 2>&1 > /dev/null
-    if [ $? -ne 0 ]; then
-        echo "[ERROR] Failed to re-scan SCSI host adapter port: ${host}"
-        exit 1
-    elif [ ${VERBOSE} -eq 1 ]; then
-        echo "[INFO] Re-scanned SCSI host adapter port: ${host}"
-    fi
-done
-sudo mount -o remount,ro /sys 
-# echo
+# [OBSOLETE - This part is now handled by the initContainer]
+# echo "#-- Re-Scanning the SCSI Bus -----------------------------"
+# #-- This operation might be required if you changed any HW config
+# SCSI_HOSTS=($(ls /sys/class/scsi_host))
+# if [[ ! ${SCSI_HOSTS[0]} =~ "host" ]]; then
+#     echo "[WARNING-ERROR] No SCSI host adapter found!"
+#     exit 1
+# elif [ ${VERBOSE} -eq 1 ]; then
+#     echo "[INFO] Found ${#SCSI_HOSTS[@]} SCSI host adapter ports"
+# fi
+# #-- WARNING: This operation should be performed on the Host (Safer)
+# sudo mount -o remount,rw /sys
+# for host in "${SCSI_HOSTS[@]}"; do
+#     echo "- - -" | sudo tee /sys/class/scsi_host/${host}/scan 2>&1 > /dev/null
+#     if [ $? -ne 0 ]; then
+#         echo "[ERROR] Failed to re-scan SCSI host adapter port: ${host}"
+#         exit 1
+#     elif [ ${VERBOSE} -eq 1 ]; then
+#         echo "[INFO] Re-scanned SCSI host adapter port: ${host}"
+#     fi
+# done
+# sudo mount -o remount,ro /sys 
+# # echo
 
-echo "#-- Retrieve MEDIUM CHARGER ------------------------------"
-#-- Retrieve the 1st generic SCSI device file corresponding to an IBM Medium Changer"
+echo "#-- Retrieve MEDIUM CHANGERS -----------------------------"
 DEVICE="mediumx"; VENDOR="IBM"; PRODUCT="03584L32"
-CHANGER=$(lsscsi -g | grep ${DEVICE} | grep ${VENDOR} | grep ${PRODUCT} | head -n 1 | awk '{print $NF}')
-if [[ ! ${CHANGER} =~ "/dev/sg" ]]; then
-    echo "[WARNING-ERROR] No medium changer device found!"
+PHY_CHANGERS=$(lsscsi -g | grep ${DEVICE} | grep ${VENDOR} | grep ${PRODUCT} | awk '{print $(NF-1)}')
+GEN_CHANGERS=$(lsscsi -g | grep ${DEVICE} | grep ${VENDOR} | grep ${PRODUCT} | awk '{print $(NF)}')
+readarray -t PHY_CHANGERS <<< "${PHY_CHANGERS}"
+readarray -t GEN_CHANGERS <<< "${GEN_CHANGERS}"
+#-- Retrieve the 1st physical IBM Medium Changer"
+if [[ ${#PHY_CHANGERS[@]} = 0 ]]; then
+    echo "[WARNING-ERROR] No physical medium changer device found!"
+    exit 1
+elif [[ ${PHY_CHANGERS[0]} != "/dev/sch0" ]]; then
+    echo "[WARNING-ERROR] Expecting physical medium changer device to be '/dev/sch0' but found '${PHY_CHANGERS[0]}'!"
     exit 1
 elif [ ${VERBOSE} -eq 1 ]; then
-    echo "[INFO] The medium changer device is: '${CHANGER}' "
-    echo
+    echo "[INFO] Found ${#PHY_CHANGERS[@]} medium changers"
+fi
+#-- Retrieve the 1st generic IBM Medium Changer"
+if [[ ${#GEN_CHANGERS[@]} = 0 ]]; then
+    echo "[WARNING-ERROR] No generic medium changer device found!"
+    exit 1
+elif [[ ! ${GEN_CHANGERS[0]} =~ "/dev/sg" ]]; then
+    echo "[WARNING-ERROR] Expecting generic medium changer device name to match '/dev/sg' but found '${GEN_CHANGERS[0]}'!"
+    exit 1
+elif [ ${VERBOSE} -eq 1 ]; then
+    echo "[INFO] Assuming medium device changer to be '${GEN_CHANGERS[0]}' "
 fi
 
 echo "#-- Retrieve TAPE DRIVES ---------------------------------"
-#-- Retrieve the generic SCSI device files corresponding to IBM Tape Drives
 DEVICE="tape"; VENDOR="IBM"; PRODUCT="ULT3580-TD9"
-TAPE_DRIVES=($(lsscsi -g | grep ${DEVICE} | grep ${VENDOR} | grep ${PRODUCT} | awk '{print $NF}'))
-if [[ ! ${TAPE_DRIVES[0]} =~ "/dev/sg" ]]; then
-    echo "[WARNING-ERROR] No tape drive device found!"
+PHY_DRIVES=$(lsscsi -g | grep ${DEVICE} | grep ${VENDOR} | grep ${PRODUCT} | awk '{print $(NF-1)}')
+GEN_DRIVES=$(lsscsi -g | grep ${DEVICE} | grep ${VENDOR} | grep ${PRODUCT} | awk '{print $(NF)}')
+readarray -t PHY_DRIVES <<< "${PHY_DRIVES}"
+readarray -t GEN_DRIVES <<< "${GEN_DRIVES}"
+#-- Retrieve the 1st physical IBM Tape Drive"
+if [[ ${#PHY_DRIVES[@]} = 0 ]]; then
+    echo "[WARNING-ERROR] No physical tape drive device found!"
+    exit 1
+elif [[ ! ${PHY_DRIVES[0]} =~ "/dev/st" ]]; then
+    echo "[WARNING-ERROR] Expecting physical tape drive name to match '/dev/st' but found '${PHY_DRIVES[0]}'!"
     exit 1
 elif [ ${VERBOSE} -eq 1 ]; then
-    echo "[INFO] Found ${#TAPE_DRIVES[@]} tape drive devices"
-    for drive in "${TAPE_DRIVES[@]}"; do
-        echo -e "\t${drive}"
-    done
-    echo
+    echo "[INFO] Found ${#PHY_DRIVES[@]} tape drives"
+fi
+#-- Retrieve the 1st generic IBM Tape Drive"
+if [[ ${#GEN_DRIVES[@]} = 0 ]]; then
+    echo "[WARNING-ERROR] No generic tape drive device found!"
+    exit 1
+elif [[ ! ${GEN_DRIVES[0]} =~ "/dev/sg" ]]; then
+    echo "[WARNING-ERROR] Expecting generic tape drive device name to match '/dev/sg' but found '${GEN_DRIVES[0]}'!"
+    exit 1
+elif [ ${VERBOSE} -eq 1 ]; then
+    echo "[INFO] Assuming tape drive to be '${GEN_DRIVES[0]}' "
 fi
 
-echo "#-- Clear existing SCSI reservations in the 1st drive ----"
-for TAPE_DRIVE in "${TAPE_DRIVES[0]}"; do
+echo "#-- Clear existing SCSI reservations in TAPE DRIVES ------"
+for TAPE_DRIVE in "${GEN_DRIVES[0]}"; do
     # Read Existing Reservation
     RES=$(sudo sg_persist --in --read-reservation ${TAPE_DRIVE})
     if [ $? -ne 0 ]; then

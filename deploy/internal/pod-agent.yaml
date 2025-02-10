@@ -147,8 +147,8 @@ spec:
           chmod +x /tmfs_init_files/tmfs_init.sh
           echo
           echo "#-- Run 'noobaa_init.sh' in 'tmfs-agent' mode -------------------------"
-          # [TODO-FIXME] /noobaa_init_files/noobaa_init.sh tmfs-agent
-          /noobaa_init_files/noobaa_init.sh agent
+          /noobaa_init_files/noobaa_init.sh tmfs-agent
+          # /noobaa_init_files/noobaa_init.sh agent
           echo
       ports:  # -------------------------------------------------
         # This should change according to the allocation from the NooBaa server

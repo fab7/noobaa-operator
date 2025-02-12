@@ -290,7 +290,10 @@ else
                 -o mountoptions="${MOUNT_OPTIONS}" -o changer_devname="${GEN_CHANGER}" \
                 -o mig_wait_sec=0 ${TMFS_DATA_DIR}  > "${TMFS_LOG_DIR}/tmfs.log" 2>&1
         fi
-        echo "[✅] 'TMFS successfully started" >> ${TMFS_INIT_LOG}
+        # Changing ownership of the TMFS work databases
+        sudo chown noob:root ${TMFS_WORK_DIR}/tmfs_*.db
+        # Done
+        echo "[✅] TMFS successfully started" >> ${TMFS_INIT_LOG}
     else
         echo "[WARNING] Skipping TMFS launch for the time being..." >> ${TMFS_INIT_LOG}
         echo >> ${TMFS_INIT_LOG}

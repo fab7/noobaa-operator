@@ -134,13 +134,13 @@ spec:
       command: ["/bin/sh", "-c"]  # -----------------------------
       args:
         - |
-          touch /tmfs_init_files/tmfs_test_init.sh
-          echo "#!/bin/sh"                                                 >> /tmfs_init_files/tmfs_test_init.sh
-          echo "echo #---------------------------------------------------" >> /tmfs_init_files/tmfs_test_init.sh
-          echo "echo #-- Hello from /tmfs_init_files/tmfs_test_init.sh --" >> /tmfs_init_files/tmfs_test_init.sh
-          echo "echo #---------------------------------------------------" >> /tmfs_init_files/tmfs_test_init.sh
-          chmod +x /tmfs_init_files/tmfs_test_init.sh
-          /tmfs_init_files/tmfs_test_init.sh
+          # OBSOLETE touch /tmfs_init_files/tmfs_test_init.sh
+          # OBSOLETE echo "#!/bin/sh"                                                 >> /tmfs_init_files/tmfs_test_init.sh
+          # OBSOLETE echo "echo #---------------------------------------------------" >> /tmfs_init_files/tmfs_test_init.sh
+          # OBSOLETE echo "echo #-- Hello from /tmfs_init_files/tmfs_test_init.sh --" >> /tmfs_init_files/tmfs_test_init.sh
+          # OBSOLETE echo "echo #---------------------------------------------------" >> /tmfs_init_files/tmfs_test_init.sh
+          # OBSOLETE chmod +x /tmfs_init_files/tmfs_test_init.sh
+          # OBSOLETE /tmfs_init_files/tmfs_test_init.sh
           echo
           echo "#-- Make the TMFS init files writable during bring-up -----------------"
           cp /tmfs_init_files/tmfs_config/tmfs_init.sh /tmfs_init_files/tmfs_init.sh
@@ -161,13 +161,13 @@ spec:
           mountPath: /usr/local/noobaa/logs
         # TMFS-related volumes
         - name: tmfsdbstorage
-          mountPath: /tmfs_db
+          mountPath: /tmfs_db   # [FIXME-TODO: Prefer /var/lib/tmfs/db or /srv/tmfs/db]
         - name: tmfs-logs-vol
-          mountPath: /tmfs_logs
+          mountPath: /tmfs_logs # [FIXME-TODO: Prefer /var/tmp/tmfs/logs or /run/tmfs/logs]
         - name: tmfs-init-vol
-          mountPath: /tmfs_init_files
+          mountPath: /tmfs_init_files # [FIXME-TODO: Prefer /var/tmp/tmfs/init or /run/tmfs/init]
         - name: tmfs-config-vol
-          mountPath: /tmfs_init_files/tmfs_config
+          mountPath: /tmfs_init_files/tmfs_config # [FIXME-TODO: Prefer /etc/tmfs/config]
 
           # [TO-TRY] Explicitly add and mount host devices to the container
           # [TO-TRY]  (because the container is neither running in privilege mode nor as root)

@@ -145,15 +145,15 @@ spec:
                 resourceFieldRef:
                   resource: limits.memory
             # NooBaa BLOCK STORE FS Config
-            - name: BLOCK_STORE_FS_TMFS_ENABLED
+            - name: CONFIG_JS_BLOCK_STORE_FS_TMFS_ENABLED
               value: "true"
             # NooBaa CHUNK Config
-            - name: CHUNK_SPLIT_AVG_CHUNK
+            - name: CONFIG_JS_CHUNK_SPLIT_AVG_CHUNK
               value: "1073741824"
-            - name: CHUNK_SPLIT_DELTA_CHUNK
+            - name: CONFIG_JS_CHUNK_SPLIT_DELTA_CHUNK
               value: "0"
             # NooBaa IO Config
-            - name: DEDUP_ENABLED
+            - name: CONFIG_JS_DEDUP_ENABLED
               value: "false"
           securityContext:
             runAsNonRoot: true

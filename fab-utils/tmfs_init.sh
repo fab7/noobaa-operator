@@ -102,7 +102,7 @@ echo -e "[✅] Selecting Fibre Channel HBA located at PCI address '${PCI_ADDRS[0
 echo "#-- Retrieve SCSI_HOST -----------------------------------" >> ${TMFS_INIT_LOG}
 SCSI_HOST_NAME=$(basename /sys/bus/pci/devices/0000:${PCI_ADDRS[0]}/host*)
 if [ $? -ne 0 ]; then
-    echo -e "[❌]${RED} Failed to retrieve the SCSI host name for PCI address '${PCI_ADDR[0]}' ${NC}" >> ${TMFS_INIT_LOG}
+    echo -e "[❌]${RED} Failed to retrieve the SCSI host name for PCI address '${PCI_ADDRS[0]}' ${NC}" >> ${TMFS_INIT_LOG}
     exit 1
 fi
 #-- Extract the SCSI host number
@@ -181,7 +181,7 @@ else
     done
 fi
 #-- Only keep the 1st generic IBM Tape Drive
-GEN_DRIVE=${GEN_DRIVE[0]}
+GEN_DRIVE=${GEN_DRIVES[0]}
 if [ ${VERBOSE} -gt 0 ]; then
     if [[ ${#GEN_DRIVES[@]} -gt 1 ]]; then
         echo -e "[INFO] Found ${#GEN_DRIVES[@]} tape drives." >> ${TMFS_INIT_LOG}
@@ -190,7 +190,6 @@ if [ ${VERBOSE} -gt 0 ]; then
         echo -e "[✅] Found tape drive to be '${GEN_DRIVE}'" >> ${TMFS_INIT_LOG}
     fi
 fi
-
 echo "#-- Check and clear existing SCSI reservations -----------" >> ${TMFS_INIT_LOG}
 GEN_DEVS=("${GEN_CHANGER}" "${GEN_DRIVE}")
 for GEN_DEV in "${GEN_DEVS[@]}"; do
@@ -199,13 +198,13 @@ for GEN_DEV in "${GEN_DEVS[@]}"; do
         echo -e "[WARNING] The SCSI device '${GEN_DEV}'experienced a Unit Attention condition in the past. ${RES}" >> ${TMFS_INIT_LOG}
         echo -e "[✅] Trying to read the SCSI reservation a second time..." >> ${TMFS_INIT_LOG}
         RES=$(sudo sg_persist --in --read-reservation ${GEN_DEV})
-    fi
-    if [ $? -ne 0 ]; then
-        echo -e "[❌]${RED} Failed to read SCSI reservations for '${GEN_DEV}' ${NC}" >> ${TMFS_INIT_LOG}
-        exit 1
-    elif [ ${VERBOSE} -gt 0 ]; then
-        echo "[INFO] Current SCSI reservation for '${GEN_DEV}' " >> ${TMFS_INIT_LOG}
-        echo "${RES}" >> ${TMFS_INIT_LOG}
+        if [ $? -ne 0 ]; then
+            echo -e "[❌]${RED} Failed to read SCSI reservations for '${GEN_DEV}' ${NC}" >> ${TMFS_INIT_LOG}
+            exit 1
+        elif [ ${VERBOSE} -gt 0 ]; then
+            echo "[INFO] Current SCSI reservation for '${GEN_DEV}' " >> ${TMFS_INIT_LOG}
+            echo "${RES}" >> ${TMFS_INIT_LOG}
+        fi
     fi
     if [[ ${RES} =~ "Reservation follows:" ]]; then
         echo "[WARNING] A SCSI reservations is in place for '${GEN_DEV}' " >> ${TMFS_INIT_LOG}
@@ -249,7 +248,7 @@ for GEN_DEV in "${GEN_DEVS[@]}"; do
         fi
     fi
 done
-echo >> ${TMFS_INIT_LOG}
+echo " " >> ${TMFS_INIT_LOG}
 
 if pgrep -x "tmfs" > /dev/null
 then
@@ -305,4 +304,4 @@ else
         echo >> ${TMFS_INIT_LOG}
     fi
 fi
-echo >> ${TMFS_INIT_LOG}
+echo " " >> ${TMFS_INIT_LOG}

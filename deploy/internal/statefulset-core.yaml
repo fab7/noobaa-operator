@@ -153,6 +153,8 @@ spec:
             - name: CONFIG_JS_CHUNK_SPLIT_DELTA_CHUNK
               value: "0"
             # NooBaa IO Config
+            - name: "CONFIG_JS_MAX_OBJECT_PART_SIZE"
+              value: "1073741824"
             - name: CONFIG_JS_DEDUP_ENABLED
               value: "false"
           securityContext:

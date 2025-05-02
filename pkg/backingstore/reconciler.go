@@ -1298,6 +1298,9 @@ func (r *Reconciler) reconcileMissingTmfsPvcs(pvcsList, tmfsPvcsList *corev1.Per
 		newPvc := r.TmfsPvcAgentTemplate.DeepCopy()
 		newPvc.Name = pvcName
 		newPvc.Namespace = options.Namespace
+		// Assign a storage class that provides data replication
+		storageClassName := "rook-cephfs"
+		newPvc.Spec.StorageClassName = &storageClassName
 		r.Own(newPvc)
 		// println("[UTK]: reconcileMissingTmfs - Trying to create PVC", i)
 		util.KubeCreateSkipExisting(newPvc)

@@ -134,13 +134,6 @@ spec:
       command: ["/bin/sh", "-c"]  # -----------------------------
       args:
         - |
-          # OBSOLETE touch /tmfs_init_files/tmfs_test_init.sh
-          # OBSOLETE echo "#!/bin/sh"                                                 >> /tmfs_init_files/tmfs_test_init.sh
-          # OBSOLETE echo "echo #---------------------------------------------------" >> /tmfs_init_files/tmfs_test_init.sh
-          # OBSOLETE echo "echo #-- Hello from /tmfs_init_files/tmfs_test_init.sh --" >> /tmfs_init_files/tmfs_test_init.sh
-          # OBSOLETE echo "echo #---------------------------------------------------" >> /tmfs_init_files/tmfs_test_init.sh
-          # OBSOLETE chmod +x /tmfs_init_files/tmfs_test_init.sh
-          # OBSOLETE /tmfs_init_files/tmfs_test_init.sh
           echo
           echo "#-- Make the TMFS init files writable during bring-up -----------------"
           cp /tmfs_init_files/tmfs_config/tmfs_init.sh /tmfs_init_files/tmfs_init.sh

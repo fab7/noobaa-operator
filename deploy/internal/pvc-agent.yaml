@@ -6,6 +6,7 @@ metadata:
     app: noobaa
   name: noobaa-pv-claim
 spec:
+  storageClassName: rook-cephfs-1d3m  # 1 DATA replication, 3 METADATA replication 
   accessModes:
     - ReadWriteOnce
   resources:
